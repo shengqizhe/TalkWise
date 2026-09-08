@@ -96,10 +96,10 @@ springdoc:
     path: /v3/api-docs
   packages-to-scan: com.example.lecture.controller
 
-# Agent 配置（密钥建议用环境变量 AGENT_API_KEY 覆盖）
+# Agent 配置（DeepSeek，OpenAI 兼容；支持用同名环境变量覆盖）
 agent:
-  api-key: ${AGENT_API_KEY:REDACTED-KEY}
-  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  model: qwen-turbo
+  api-key: ${OPENAI_API_KEY:REDACTED-KEY}
+  base-url: ${OPENAI_BASE_URL:https://api.deepseek.com}
+  model: ${OPENAI_MODEL:deepseek-v4-flash}
   max-turns: 8
   max-tool-result-chars: 2000
