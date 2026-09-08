@@ -23,6 +23,7 @@
         <hutool.version>5.8.20</hutool.version>
         <springdoc.version>2.2.0</springdoc.version>
         <sa-token.version>1.37.0</sa-token.version>
+        <langchain4j.version>0.35.0</langchain4j.version>
         <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
     </properties>
 
@@ -151,6 +152,18 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- LangChain4j（Agent 模块：LLM 客户端与 function calling） -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>${langchain4j.version}</version>
         </dependency>
     </dependencies>
     <build>

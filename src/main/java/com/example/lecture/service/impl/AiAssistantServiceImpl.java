@@ -10,6 +10,7 @@ import com.example.lecture.mapper.LocationMapper;
 import com.example.lecture.service.AiAssistantService;
 import com.example.lecture.service.RegistrationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
@@ -39,8 +40,15 @@ public class AiAssistantServiceImpl implements AiAssistantService {
     @Autowired
     private RegistrationService registrationService;
 
-    private static final String QIANWEN_API_KEY = "REDACTED-KEY";
-    private static final String QIANWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    @Value("${agent.api-key:}")
+    private String qianwenApiKey;
+
+    @Value("${agent.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}")
+    private String qianwenBaseUrl;
+
+    private String chatCompletionsUrl() {
+        return qianwenBaseUrl + "/chat/completions";
+    }
 
     @Override
     public AiAssistantResponseDTO chat(AiAssistantRequestDTO request) {
@@ -101,7 +109,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + QIANWEN_API_KEY);
+            headers.set("Authorization", "Bearer " + qianwenApiKey);
             Map<String, Object> body = new HashMap<>();
             body.put("model", "qwen-turbo");
             List<Map<String, String>> messages = new ArrayList<>();
@@ -113,7 +121,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             ObjectMapper objectMapper = new ObjectMapper();
             String jsonBody = objectMapper.writeValueAsString(body);
             HttpEntity<String> entity = new HttpEntity<String>(jsonBody, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(QIANWEN_API_URL, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(chatCompletionsUrl(), entity, String.class);
             String aiReply = "";
             if (response.getStatusCode() == HttpStatus.OK) {
                 JsonNode result = objectMapper.readTree(response.getBody());
@@ -332,7 +340,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + QIANWEN_API_KEY);
+            headers.set("Authorization", "Bearer " + qianwenApiKey);
 
             Map<String, Object> body = new HashMap<>();
             body.put("model", "qwen-turbo");
@@ -347,7 +355,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             String jsonBody = objectMapper.writeValueAsString(body);
             HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
 
-            ResponseEntity<String> response = restTemplate.postForEntity(QIANWEN_API_URL, entity, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(chatCompletionsUrl(), entity, String.class);
             if (response.getStatusCode() == HttpStatus.OK) {
                 JsonNode result = objectMapper.readTree(response.getBody());
                 if (result.has("choices")) {
