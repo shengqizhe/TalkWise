@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生报名通知</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .info-item {
+            margin: 10px 0;
+            padding: 8px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            display: inline-block;
+            width: 100px;
+        }
+        .info-value {
+            color: #007bff;
+            font-weight: 500;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeaa7;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .student-name {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 学生报名通知</h1>
+        </div>
+        
+        <div class="content">
+            <p>尊敬的 <strong th:text="${teacherName}">教师姓名</strong> 老师，您好！</p>
+            
+            <div class="highlight">
+                <p>🎉 有学生报名了您的讲座！</p>
+            </div>
+            
+            <div class="info-box">
+                <h3 style="color: #007bff; margin-top: 0;">📋 报名详情</h3>
+                
+                <div class="info-item">
+                    <span class="info-label">学生姓名：</span>
+                    <span class="info-value student-name" th:text="${studentName}">学生姓名</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">讲座标题：</span>
+                    <span class="info-value" th:text="${lectureTitle}">讲座标题</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">开始时间：</span>
+                    <span class="info-value" th:text="${startTime}">开始时间</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">讲座地点：</span>
+                    <span class="info-value" th:text="${location}">讲座地点</span>
+                </div>
+            </div>
+            
+            <p>请您及时关注报名情况，做好讲座准备工作。如有任何问题，请及时联系管理员。</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <p style="color: #28a745; font-weight: bold;">✅ 期待您的精彩讲座！</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>此邮件由大学讲座管理系统自动发送，请勿回复。</p>
+            <p>如有疑问，请联系系统管理员。</p>
+        </div>
+    </div>
+</body>
+</html>

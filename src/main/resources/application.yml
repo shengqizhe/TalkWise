@@ -1,0 +1,97 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: University_Lecture_Management_System
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/university_lecture_management?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: REDACTED-DB-PASSWORD
+    
+  # 日期时间格式配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss  # 配置日期时间格式
+    time-zone: GMT+8  # 配置时区
+
+  # 邮件配置
+  mail:
+    host: smtp.qq.com  # 邮件服务器地址，这里以QQ邮箱为例
+    port: 587  # 邮件服务器端口
+    username: REDACTED@example.com  # 发送方邮箱
+    password: REDACTED-MAIL-CODE  # 邮箱授权码（不是登录密码）
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.qq.com
+          connectiontimeout: 5000  # 连接超时5秒
+          timeout: 5000           # 读取超时5秒
+          writetimeout: 5000       # 写入超时5秒 
+
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+# 静态资源访问配置
+web:
+  resources:
+    static-locations: classpath:/static/
+    
+# 文件上传路径配置      
+file:
+  upload:
+    path: ${user.dir}/src/main/resources/static/uploads/
+    avatar: ${file.upload.path}avatar/
+    lecture: ${file.upload.path}lecture/
+
+# Sa-Token配置
+sa-token:
+  # token名称 (同时也是cookie名称)
+  token-name: Authorization
+  # token有效期，单位s 默认30天, -1代表永不过期 
+  timeout: 2592000
+  # token临时有效期 (指定时间内无操作就视为token过期) 单位: 秒
+  active-timeout: 3600
+  # 是否允许同一账号并发登录 (为true时允许一起登录, 为false时新登录挤掉旧登录) 
+  is-concurrent: true
+  # 在多人登录同一账号时，是否共用一个token (为true时所有登录共用一个token, 为false时每次登录新建一个token) 
+  is-share: false
+  # token风格
+  token-style: uuid
+  # 是否输出操作日志 
+  is-log: true
+
+# MyBatis-Plus配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.example.lecture.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Swagger配置
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+  packages-to-scan: com.example.lecture.controller

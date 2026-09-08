@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>讲座取消报名通知</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #FF9800; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background-color: #f9f9f9; }
+        .footer { padding: 20px; text-align: center; color: #666; }
+        .highlight { color: #FF9800; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>讲座取消报名通知</h1>
+        </div>
+        <div class="content">
+            <p>亲爱的 <span class="highlight" th:text="${userName}">用户</span>，</p>
+            <p>您已成功取消以下讲座的报名：</p>
+            <ul>
+                <li><strong>讲座标题：</strong><span th:text="${lectureTitle}">讲座标题</span></li>
+                <li><strong>开始时间：</strong><span th:text="${startTime}">开始时间</span></li>
+                <li><strong>讲座地点：</strong><span th:text="${location}">讲座地点</span></li>
+            </ul>
+            <p>如果您改变主意，可以重新报名参加该讲座（如果还有名额）。</p>
+            <p>感谢您对我们讲座活动的关注！</p>
+        </div>
+        <div class="footer">
+            <p>此邮件由大学讲座管理系统自动发送，请勿回复。</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# 讲座提醒功能配置示例
+# 可以通过此配置文件自定义讲座提醒的各项参数
+
+lecture:
+  reminder:
+    # 提醒时间（分钟）- 在讲座开始前多少分钟发送提醒（固定模式）
+    reminder-minutes: 60
+    
+    # 时间窗口（秒）- 提醒发送的时间窗口，避免重复发送
+    window-seconds: 30
+    
+    # 是否启用动态提醒时间计算
+    dynamic-reminder-enabled: true
+    
+
+    dynamic-reminder-rules: "morning:60,afternoon:60,evening:60,night:60"
+    
+    # 最小提醒时间（分钟）
+    min-reminder-minutes: 15
+    
+    # 最大提醒时间（分钟）
+    max-reminder-minutes: 180
+    
+    # 是否启用邮件提醒
+    email-enabled: true
+    
+    # 是否启用WebSocket提醒
+    websocket-enabled: true
+    
+    # 邮件重试次数
+    email-retry-count: 3
+    
+    # 邮件超时时间（毫秒）
+    email-timeout-ms: 5000
+    
+    # 是否启用详细日志
+    verbose-logging: true
+
+# 使用说明：
+# 1. 将此文件复制到 application.yml 或 application.properties 中
+# 2. 根据需要调整各项配置参数
+# 3. reminder-minutes 控制提前多长时间发送提醒
+# 4. window-seconds 控制时间窗口，避免重复发送
+# 5. 可以通过 email-enabled 和 websocket-enabled 控制提醒方式

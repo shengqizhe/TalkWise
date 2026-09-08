@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>讲座即将开始</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #FF6B35, #FF9800); 
+            color: white; 
+            padding: 30px 20px; 
+            text-align: center; 
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .countdown {
+            background-color: #f44336;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .content { 
+            padding: 30px 20px; 
+            background-color: white;
+        }
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .lecture-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #FF9800;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .lecture-info h3 {
+            margin: 0 0 15px 0;
+            color: #FF9800;
+            font-size: 18px;
+        }
+        .info-item {
+            display: flex;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .info-label {
+            font-weight: bold;
+            min-width: 80px;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+            flex: 1;
+        }
+        .reminder-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .reminder-title {
+            color: #856404;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .reminder-list {
+            color: #856404;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .footer { 
+            padding: 20px; 
+            text-align: center; 
+            color: #666;
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+        .highlight { color: #FF9800; font-weight: bold; }
+        .urgent { color: #f44336; font-weight: bold; }
+        .icon {
+            display: inline-block;
+            width: 20px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 讲座即将开始提醒</h1>
+        </div>
+        
+        <div class="countdown">
+            ⏰ 距离讲座开始还有约 <span th:text="${reminderMinutes != null ? reminderMinutes : 15}">15</span> 分钟
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                <p>亲爱的 <span class="highlight" th:text="${userName}">用户</span>，</p>
+                <p class="urgent">您报名的讲座即将开始，请做好准备！</p>
+            </div>
+            
+            <div class="lecture-info">
+                <h3>📚 讲座详情</h3>
+                <div class="info-item">
+                    <span class="info-label">📖 标题：</span>
+                    <span class="info-value" th:text="${lectureTitle}">讲座标题</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">🕐 时间：</span>
+                    <span class="info-value" th:text="${startTime}">开始时间</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">📍 地点：</span>
+                    <span class="info-value" th:text="${location}">讲座地点</span>
+                </div>
+            </div>
+            
+            <div class="reminder-box">
+                <div class="reminder-title">💡 温馨提醒</div>
+                <ul class="reminder-list">
+                    <li>请提前5-10分钟到达讲座地点</li>
+                    <li>建议携带笔记本和笔，记录重要内容</li>
+                    <li>请将手机调至静音模式</li>
+                    <li>如有紧急情况无法参加，请及时取消报名</li>
+                </ul>
+            </div>
+            
+            <p style="text-align: center; margin-top: 30px; font-size: 16px; color: #FF9800; font-weight: bold;">
+                🎯 期待您的准时参与，共享知识盛宴！
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>此邮件由大学讲座管理系统自动发送，请勿回复。</p>
+            <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                如需帮助，请联系系统管理员
+            </p>
+        </div>
+    </div>
+</body>
+</html>
