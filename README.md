@@ -75,12 +75,12 @@
 ### 后端启动
 ```bash
 # 1. 初始化数据库：创建库并执行脚本（src/main/resources/db 下）
-# 2. 设置必需的环境变量（敏感信息不进代码库）
-#    MYSQL_PASSWORD   数据库密码
-#    MAIL_USERNAME    发件邮箱
-#    MAIL_PASSWORD    邮箱授权码
-#    OPENAI_API_KEY   LLM 密钥（DeepSeek）
-#    可选：OPENAI_MODEL / OPENAI_BASE_URL 等
+# 2. 配置环境变量（敏感信息不进代码库）：
+#    方式一（推荐）：复制 .env.example 为 .env 并填入真实值（.env 已被 gitignore）
+#        Git Bash 加载：  set -a; source .env; set +a
+#        IDEA 加载：      安装 EnvFile 插件并勾选 .env 文件
+#    方式二：手动逐个设置（见下方 Windows 提示）
+#    必需项：MYSQL_PASSWORD / MAIL_USERNAME / MAIL_PASSWORD / OPENAI_API_KEY
 # 3. 启动
 JAVA_HOME=/path/to/jdk-17 ./mvnw spring-boot:run
 # 服务地址 http://localhost:8080/api（Swagger: /api/swagger-ui.html）

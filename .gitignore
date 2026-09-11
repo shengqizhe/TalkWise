@@ -35,3 +35,8 @@ build/
 ### Frontend ###
 frontend/node_modules/
 frontend/dist/
+
+### 本地环境变量（敏感配置，不提交） ###
+.env
+.env.local
+!.env.example
