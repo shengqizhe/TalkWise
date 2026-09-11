@@ -26,4 +26,22 @@ public class AgentProperties {
 
     /** 工具结果回填模型前的最大字符数（防上下文溢出） */
     private int maxToolResultChars = 2000;
+
+    /** 评价分析分批参数（标定值：配置化，换模型/评测后可调整） */
+    private Analysis analysis = new Analysis();
+
+    @Data
+    public static class Analysis {
+        /** 每批内容预算（token 估算值）——一级参数，批大小的主约束 */
+        private int batchMaxTokens = 3000;
+
+        /** 每批条数安全阀（防大量短评把批切碎） */
+        private int batchMaxItems = 40;
+
+        /** 低于此长度的评价视为简短评价，不进入分析（仅计数） */
+        private int minContentLength = 5;
+
+        /** 单次 Reduce 输入预算（token 估算值），超过则触发两级 Reduce */
+        private int reduceInputBudgetTokens = 8000;
+    }
 }

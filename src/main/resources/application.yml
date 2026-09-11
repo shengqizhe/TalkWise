@@ -103,3 +103,10 @@ agent:
   model: ${OPENAI_MODEL:deepseek-v4-flash}
   max-turns: 8
   max-tool-result-chars: 2000
+
+  # 评价分析分批参数（标定值：换模型或调优后请同步更新，可用环境变量覆盖）
+  analysis:
+    batch-max-tokens: ${ANALYSIS_BATCH_MAX_TOKENS:3000}            # 每批内容预算（token 估算），一级参数
+    batch-max-items: ${ANALYSIS_BATCH_MAX_ITEMS:40}                # 每批条数安全阀（防短评碎片化）
+    min-content-length: ${ANALYSIS_MIN_CONTENT_LENGTH:5}           # 低于此长度的评价仅计数不分析
+    reduce-input-budget-tokens: ${ANALYSIS_REDUCE_BUDGET:8000}     # Reduce 输入预算，超则两级 Reduce
