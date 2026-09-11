@@ -7,6 +7,24 @@
 
 ---
 
+## 2026-09-11 · 后端与数据库补齐：签到 / 评价
+
+**数据库**
+- `registration` 表新增 `checkin_time`（签到时间）字段；`schema.sql` 追加「已有库升级语句」块（含 ALTER 语句）
+
+**后端**
+- 签到：`checkin` 写入签到时间；`cancelCheckin` 与按讲座重置签到同步清空签到时间（改用 UpdateWrapper 处理 null）
+- **评价写接口补全业务校验**（此前为裸 CRUD，无任何校验）：
+  - 创建：讲座必须**已结束**、必须**已确认报名**该讲座、**一人一评**（友好提示）、`userId 以登录态为准`（防伪造）、评分 1~5 校验、清理客户端不可指定字段
+  - 更新：**仅本人**可改，且仅允许修改评分与内容
+  - 删除：**仅本人**可删
+  - 新增 `EvaluationService.createEvaluation / updateEvaluation / deleteEvaluation`，Controller 由裸 `save/updateById/removeById` 改走业务方法
+
+**前端**
+- 签到按钮显示条件与后端一致（讲座进行中才显示）；评价入口（上一提交）闭环打通：学生评价 → 教师查看/修改 → AI 评价分析
+
+---
+
 ## 2026-09-11 · 补齐学生签到/评价入口（评价数据闭环）
 
 **新特性**

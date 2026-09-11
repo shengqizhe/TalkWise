@@ -36,6 +36,22 @@ public interface EvaluationService extends IService<Evaluation> {
      * 获取讲座的评价统计
      */
     EvaluationStats getEvaluationStatsByLectureId(Long lectureId);
+
+    /**
+     * 创建评价（业务校验：讲座已结束、需已确认报名该讲座、一人一评；userId 以登录态为准）
+     */
+    void createEvaluation(Evaluation evaluation);
+
+    /**
+     * 更新评价（仅本人可改，仅允许修改评分与内容）
+     */
+    void updateEvaluation(Evaluation evaluation);
+
+    /**
+     * 删除评价（仅本人）
+     */
+    void deleteEvaluation(Long id);
+
     /**
      * 评价统计信息
      */

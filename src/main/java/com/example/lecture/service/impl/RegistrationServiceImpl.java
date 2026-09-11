@@ -1,6 +1,7 @@
 package com.example.lecture.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.lecture.common.api.ResultCode;
 import com.example.lecture.common.exception.ApiException;
@@ -490,8 +491,9 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
             }
         }
         
-        // 6. 更新签到状态
+        // 6. 更新签到状态与签到时间
         registration.setCheckinStatus(1);
+        registration.setCheckinTime(LocalDateTime.now());
         boolean updateSuccess = updateById(registration);
         
         if (!updateSuccess) {
@@ -529,9 +531,11 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
             throw new ApiException("只有正在进行中的讲座才能取消签到");
         }
         
-        // 6. 更新签到状态为未签到
-        registration.setCheckinStatus(0);
-        boolean updateSuccess = updateById(registration);
+        // 6. 更新签到状态为未签到，并清空签到时间
+        boolean updateSuccess = update(new LambdaUpdateWrapper<Registration>()
+                .eq(Registration::getId, registrationId)
+                .set(Registration::getCheckinStatus, 0)
+                .set(Registration::getCheckinTime, null));
         
         if (!updateSuccess) {
             throw new ApiException("取消签到失败，请稍后重试");
@@ -557,12 +561,14 @@ public class RegistrationServiceImpl extends ServiceImpl<RegistrationMapper, Reg
              return;
          }
          
-         // 3. 批量重置签到状态为未签到(0)
+         // 3. 批量重置签到状态为未签到(0)，并清空签到时间
          int resetCount = 0;
          for (Registration registration : registrations) {
              if (registration.getCheckinStatus() != null && registration.getCheckinStatus() == 1) {
-                 registration.setCheckinStatus(0);
-                 updateById(registration);
+                 update(new LambdaUpdateWrapper<Registration>()
+                         .eq(Registration::getId, registration.getId())
+                         .set(Registration::getCheckinStatus, 0)
+                         .set(Registration::getCheckinTime, null));
                  resetCount++;
              }
          }

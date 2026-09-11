@@ -70,4 +70,9 @@ public class Registration {
      */
     private Integer checkinStatus;
 
+    /**
+     * 签到时间
+     */
+    private LocalDateTime checkinTime;
+
 }

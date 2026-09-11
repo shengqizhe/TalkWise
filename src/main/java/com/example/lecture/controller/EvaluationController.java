@@ -64,21 +64,21 @@ public class EvaluationController {
     @Operation(summary = "创建评价")
     @PostMapping("/create")
     public Result<Void> create(@RequestBody Evaluation evaluation) {
-        evaluationService.save(evaluation);
+        evaluationService.createEvaluation(evaluation);
         return Result.success();
     }
     
     @Operation(summary = "更新评价")
     @PutMapping("/update")
     public Result<Void> update(@RequestBody Evaluation evaluation) {
-        evaluationService.updateById(evaluation);
+        evaluationService.updateEvaluation(evaluation);
         return Result.success();
     }
     
     @Operation(summary = "删除评价")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
-        evaluationService.removeById(id);
+        evaluationService.deleteEvaluation(id);
         return Result.success();
     }
     

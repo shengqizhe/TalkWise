@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS `registration` (
      `cancel_time` DATETIME DEFAULT NULL COMMENT '取消时间',
      `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态(1:已报名 2:已取消)',
      `checkin_status` TINYINT NOT NULL DEFAULT 0 COMMENT '签到状态(0:未签到 1:已签到)',
+     `checkin_time` DATETIME DEFAULT NULL COMMENT '签到时间',
      `recommend_reason` VARCHAR(500) DEFAULT NULL COMMENT '推荐理由(AI生成)',
     `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '是否删除(0:未删除 1:已删除)',
     `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -322,3 +323,9 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
     KEY `idx_agent_task_user` (`user_id`, `created_time`),
     CONSTRAINT `fk_agent_task_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 异步任务表';
+
+-- ============================================================
+-- 已有库升级语句（新装环境无需执行，建表语句已包含）
+-- ============================================================
+-- 2026-09-11：报名表增加签到时间字段
+-- ALTER TABLE `registration` ADD COLUMN `checkin_time` DATETIME DEFAULT NULL COMMENT '签到时间' AFTER `checkin_status`;

@@ -126,9 +126,13 @@ function viewDetail(booking) {
   router.push(`/student/lectures/${booking.lectureId}`);
 }
 
-// 可签到：已确认报名且未签到
+// 可签到：已确认报名、未签到，且讲座进行中（与后端校验一致）
 function canCheckin(booking) {
-  return booking.status === "confirmed" && booking.checkinStatus !== 1;
+  return (
+    booking.status === "confirmed" &&
+    booking.checkinStatus !== 1 &&
+    booking.lectureStatus === 2
+  );
 }
 
 // 签到

@@ -3,16 +3,21 @@ package com.example.lecture.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import cn.dev33.satoken.stp.StpUtil;
+import com.example.lecture.common.exception.ApiException;
 import com.example.lecture.dto.EvaluationDTO;
 import com.example.lecture.entity.Evaluation;
 import com.example.lecture.entity.Lecture;
+import com.example.lecture.entity.Registration;
 import com.example.lecture.entity.User;
 import com.example.lecture.mapper.EvaluationMapper;
 import com.example.lecture.mapper.LectureMapper;
+import com.example.lecture.mapper.RegistrationMapper;
 import com.example.lecture.mapper.UserMapper;
 import com.example.lecture.service.EvaluationService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -31,6 +36,111 @@ public class EvaluationServiceImpl extends ServiceImpl<EvaluationMapper, Evaluat
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private RegistrationMapper registrationMapper;
+
+    // ==================== 写操作（含业务校验与归属校验） ====================
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createEvaluation(Evaluation evaluation) {
+        if (evaluation.getLectureId() == null) {
+            throw new ApiException("讲座ID不能为空");
+        }
+        validateScore(evaluation.getScore());
+
+        // userId 以登录态为准，忽略请求体传入值（防伪造）
+        Long userId = currentUserId();
+        evaluation.setUserId(userId);
+
+        Lecture lecture = lectureMapper.selectById(evaluation.getLectureId());
+        if (lecture == null) {
+            throw new ApiException("讲座不存在");
+        }
+        if (lecture.getStatus() == null || lecture.getStatus() != 3) {
+            throw new ApiException("讲座结束后才能评价");
+        }
+
+        // 必须已确认报名该讲座
+        Long regCount = registrationMapper.selectCount(new LambdaQueryWrapper<Registration>()
+                .eq(Registration::getUserId, userId)
+                .eq(Registration::getLectureId, evaluation.getLectureId())
+                .eq(Registration::getStatus, 1));
+        if (regCount == null || regCount == 0) {
+            throw new ApiException("只有报名参加过该讲座才能评价");
+        }
+
+        // 一人一评（数据库唯一键兜底，此处给出友好提示）
+        Long exists = baseMapper.selectCount(new LambdaQueryWrapper<Evaluation>()
+                .eq(Evaluation::getUserId, userId)
+                .eq(Evaluation::getLectureId, evaluation.getLectureId()));
+        if (exists != null && exists > 0) {
+            throw new ApiException("你已评价过该讲座，请使用\u201c修改评价\u201d");
+        }
+
+        // 清理不可由客户端指定的字段
+        evaluation.setId(null);
+        if (evaluation.getContent() == null) {
+            evaluation.setContent("");
+        }
+        evaluation.setSentimentScore(null);
+        evaluation.setImprovementSuggestion(null);
+        save(evaluation);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateEvaluation(Evaluation evaluation) {
+        if (evaluation.getId() == null) {
+            throw new ApiException("评价ID不能为空");
+        }
+        validateScore(evaluation.getScore());
+
+        Evaluation existing = getById(evaluation.getId());
+        if (existing == null) {
+            throw new ApiException("评价不存在");
+        }
+        if (!currentUserId().equals(existing.getUserId())) {
+            throw new ApiException("只能修改自己的评价");
+        }
+
+        // 仅允许修改评分与内容
+        Evaluation update = new Evaluation();
+        update.setId(existing.getId());
+        update.setScore(evaluation.getScore());
+        update.setContent(evaluation.getContent() == null ? "" : evaluation.getContent());
+        updateById(update);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteEvaluation(Long id) {
+        Evaluation existing = getById(id);
+        if (existing == null) {
+            throw new ApiException("评价不存在");
+        }
+        if (!currentUserId().equals(existing.getUserId())) {
+            throw new ApiException("只能删除自己的评价");
+        }
+        removeById(id);
+    }
+
+    private void validateScore(BigDecimal score) {
+        if (score == null) {
+            throw new ApiException("请选择评分");
+        }
+        if (score.compareTo(BigDecimal.valueOf(1)) < 0 || score.compareTo(BigDecimal.valueOf(5)) > 0) {
+            throw new ApiException("评分需在 1~5 之间");
+        }
+    }
+
+    private Long currentUserId() {
+        if (!StpUtil.isLogin()) {
+            throw new ApiException("请先登录");
+        }
+        return StpUtil.getLoginIdAsLong();
+    }
 
     @Override
     public Page<EvaluationDTO> getEvaluationPage(Page<Evaluation> page, String keyword, Long lectureId, Long teacherId, String sort, String order)  {
