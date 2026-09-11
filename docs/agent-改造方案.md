@@ -27,7 +27,7 @@
 |----|------|------|
 | 框架 | Java 17 + Spring Boot 3.1.5（现有）+ LangChain4j | 不升级 Spring Boot；`@Tool` + `AiServices` 提供工具注册与 function calling |
 | 模型 | 通义千问 qwen-turbo（现有 DashScope 兼容接口） | 支持 function calling；API key 从代码迁到 `application.yml`（当前硬编码 `AiAssistantServiceImpl.java:42`） |
-| 流式 | SSE（SseEmitter） | 事件流：token / tool_call / tool_result / confirmation_request / done |
+| 流式 | SSE（SseEmitter） | 事件流：token / tool_call / tool_result / done |
 | 实时推送 | 复用现有 WebSocket | 主动任务结果（报表、提醒）推送 |
 
 ## 4. Agent 模块结构（新增包）
@@ -91,18 +91,17 @@ public List<LectureCard> searchLectures(String time, String keyword, String spea
 public String registerLecture(Long lectureId) { ... }
 ```
 
-### 5.3 确认审批流（写操作 human-in-the-loop）
+### 5.3 写操作直接执行（用户明确指令即授权）
 
 ```
-模型请求 WRITE 工具
-  → 引擎不执行，生成 PendingAction：{id, 用户, 工具, 参数, 描述}
-  → SSE 推送 → 前端渲染确认卡片
-  → 确认 → CONFIRMED → 执行工具 → 结果回填会话
-  → 拒绝 → REJECTED → 丢弃
-  → 5 分钟未操作 → EXPIRED → 丢弃
+模型请求 WRITE 工具（用户明确要求报名/取消等）
+  → 引擎记录审计日志（用户、工具、参数）
+  → 直接执行工具 → 结果回填会话 → 模型如实告知执行结果
 ```
 
-**约束**：模型永远无法直接执行写操作；业务规则校验（防重复、截止时间）仍在 Service 层。
+**约束**：写操作仅限当前登录用户自己的数据（身份来自 AgentContext，不接受模型传参）；
+业务规则校验（防重复、容量、截止时间）由 Service 层兜底；
+执行结果必须如实回执、不允许编造；系统提示词要求"意图不明确时先询问，明确指令才执行"。
 
 ### 5.4 会话与追踪
 
@@ -118,7 +117,7 @@ public String registerLecture(Long lectureId) { ... }
 | 1 | **自然语言数据问答** | `queryStatistics` 工具：模型把自然语言映射到预定义指标，**不生成 SQL** | 管理员/教师 |
 | 2 | **对话式讲座查询/推荐** | `searchLectures` 意图→工具参数；排序用规则代码，LLM 生成推荐理由与多轮修正 | 学生 |
 | 3 | **容量规划**（详见 §7） | 统计（历史满座率）× 语义（LLM 评估内容重要性/讲师声望）融合，教师确认 | 教师 |
-| 4 | 报名 / 取消报名 | 工具包装现有 Service + 对话内二次确认 | 学生 |
+| 4 | 报名 / 取消报名 | 工具包装现有 Service；用户明确指令时直接执行，审计日志留痕 | 学生 |
 | 5 | 自动答疑（可选） | RAG，**取决于讲座资料数据量，数据薄则不做** | 学生 |
 
 ### 6.2 单步 LLM 功能点（不建多步循环）
@@ -176,7 +175,7 @@ public String registerLecture(Long lectureId) { ... }
 轮1  模型 → searchLectures(周末) + getMySchedule(本周)   # 并行/顺序自主决定
 轮2  → 冲突过滤（周六上午有课）→ getMyRegistrations() 排除已报
 轮3  规则排序（兴趣标签）→ LLM 生成推荐理由 → 反问"需要报名吗？"
-学生："报《大模型实践》" → registerLecture → 确认卡片 → 确认后执行
+学生："报《大模型实践》" → registerLecture → 引擎直接执行 → 如实回执"已报名成功"
 ```
 
 ## 9. 数据设计（新增 5 张表，不动现有表）
@@ -185,14 +184,13 @@ public String registerLecture(Long lectureId) { ... }
 |----|------|
 | `agent_session` | 会话（id, user_id, title, created_at, updated_at） |
 | `agent_message` | 消息（id, session_id, role, content, tool_calls JSON） |
-| `pending_action` | 待确认动作（id, session_id, user_id, tool_name, params JSON, status: PENDING/CONFIRMED/REJECTED/EXPIRED, 时间戳） |
+| `pending_action` | ~~已废弃~~（设计变更为写操作直接执行，不再需要待确认动作表） |
 | `agent_trace` | 执行日志（id, session_id, turn_no, request/response/tool_calls JSON, latency_ms, tokens, status） |
 | `agent_task` | 主动任务（id, type, params JSON, status, result JSON, 时间戳） |
 
 ## 10. 接口设计
 
-- `POST /api/agent/chat` → SSE 流，事件：`token` / `tool_call` / `tool_result` / `confirmation_request` / `done`
-- `POST /api/agent/actions/{id}/confirm` / `reject`
+- `POST /api/agent/chat` → SSE 流，事件：`token` / `tool_call` / `tool_result` / `done`
 - `GET /api/agent/sessions`、`GET /api/agent/traces/{sessionId}`
 - `POST /api/agent/tasks`（报表任务，可选阶段）
 - `WS /ws/agent`：主动任务结果推送
@@ -201,16 +199,16 @@ public String registerLecture(Long lectureId) { ... }
 
 ## 11. 前端改造
 
-- 消息模型升级：`{type: text | tool_call | confirmation_card}`
+- 消息模型升级：`{type: text | tool_call}`（展示工具调用状态；无确认卡片）
 - 弹窗组件抽成 `AgentChatPanel.vue`，`FloatingAiBot.vue` 与独立页 `StudentAi.vue` 共用
-- 确认卡片渲染：动作描述 + 确认/拒绝按钮 + 状态回显
+- 执行回执：写操作完成后以文本如实回显结果
 
 ## 12. 实施阶段
 
 | 阶段 | 内容 | 完成后可演示 |
 |------|------|-------------|
-| A | git init 提交现状；引擎 + 工具注册 + 只读工具（searchLectures / getMyRegistrations / getMySchedule / queryStatistics）+ SSE + 前端消息模型 | 自然语言查数据、对话式查讲座 |
-| B | 确认流 + 写工具（register / cancel） | 推荐→确认→报名闭环 |
+| A | git init 提交现状；引擎 + 工具注册 + 工具（searchLectures / getMyRegistrations / registerLecture / cancelRegistration，写操作直接执行）+ 审计日志 | 对话式查讲座、对话式报名/取消 |
+| B | 前端接入：悬浮球切换 `/api/agent/chat`、管理员控制台补 AI 入口、消息模型升级 | 三端对话可用 |
 | C | 单步功能点：文案生成、情感分析 | 教师端生成宣传文案 |
 | D | 容量规划（统计×语义 + 教师确认） | 容量建议场景 |
 | E | RAG 答疑（先评估讲座资料数据量） | 讲座内容问答 |
@@ -227,7 +225,7 @@ public String registerLecture(Long lectureId) { ... }
 
 1. agent 模块不写 SQL，只调现有 Service
 2. 写操作（报名/取消/建讲座）必须走确认流
-3. LLM 输出定性结论，数值融合/排序用规则代码
+2. 写操作直接执行（用户明确指令即授权）：身份只取当前登录用户，审计日志留痕，Service 层保底校验
 4. 不动现有业务表结构，只新增 agent 表
 5. API key 不留在源码
 6. 每次模型调用落 trace

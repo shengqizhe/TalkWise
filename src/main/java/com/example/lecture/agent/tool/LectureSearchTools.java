@@ -52,6 +52,7 @@ public class LectureSearchTools {
         for (int i = 0; i < limit; i++) {
             Lecture lec = lectures.get(i);
             sb.append(i + 1).append(". 《").append(lec.getTitle()).append("》")
+                    .append("（ID：").append(lec.getId()).append("）")
                     .append(" 主讲人：").append(lec.getSpeaker())
                     .append(" 时间：").append(lec.getLectureTime() == null ? "待定" : FMT.format(lec.getLectureTime()))
                     .append(" 地点：").append(locationName(lec.getLocationId()))

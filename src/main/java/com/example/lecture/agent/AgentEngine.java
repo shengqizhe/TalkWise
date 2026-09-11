@@ -50,8 +50,9 @@ public class AgentEngine {
                     + "你可以调用工具查询讲座、查看用户报名等。"
                     + "规则：1) 只有工具能拿到真实数据，回答讲座/报名类问题必须先调用相关工具，不要编造；"
                     + "2) 工具返回空结果时如实告诉用户没有找到，并给出建议；"
-                    + "3) 涉及报名/取消等写操作时，先向用户说明操作需要确认，不要直接声称已完成；"
-                    + "4) 回复使用简洁自然的中文，讲座信息用要点列出。");
+                    + "3) 当用户明确要求执行操作（如报名、取消报名）时，直接调用对应工具执行，并以工具返回的真实结果如实告知，不要编造执行结果；"
+                    + "4) 用户意图不明确（例如只说「想参加」但没说报名）时，先询问确认再执行；"
+                    + "5) 回复使用简洁自然的中文，讲座信息用要点列出。");
 
     @PostConstruct
     public void init() {
@@ -111,14 +112,15 @@ public class AgentEngine {
         return fallback;
     }
 
-    /** 分发工具调用：READ 直接执行；WRITE 暂返回占位说明（确认流阶段 B 接入） */
+    /** 分发工具调用：READ/WRITE 均直接执行；WRITE 记审计日志（用户明确指令即授权） */
     private String dispatch(ToolExecutionRequest request) {
         AgentToolRegistry.ToolDefinition def = registry.find(request.name());
         if (def == null) {
             return "工具不存在：" + request.name();
         }
         if (def.type == ToolType.WRITE) {
-            return "该操作需要用户确认后才能执行，请先向用户说明并等待确认（确认机制即将上线）。";
+            log.info("[Agent审计] 用户 {} 执行写操作 {}，参数 {}",
+                    AgentContext.getUserId(), request.name(), request.arguments());
         }
         String result = registry.execute(def, request.arguments());
         int maxChars = properties.getMaxToolResultChars();
