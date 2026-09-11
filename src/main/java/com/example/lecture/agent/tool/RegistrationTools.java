@@ -30,7 +30,10 @@ public class RegistrationTools {
 
     @AgentTool(
             name = "getMyRegistrations",
-            description = "查询当前用户自己已报名的讲座列表，返回讲座标题、主讲人、时间、地点与报名时间。"
+            domain = "registration",
+            description = "查询当前登录用户自己已报名的讲座（标题、讲座ID、主讲人、时间、地点）。"
+                    + "适用：用户问\"我报了哪些\"\"我的安排\"。"
+                    + "不适用：查某个讲座的所有报名学生（那是教师端名单功能，不在本对话范围）。"
     )
     public String getMyRegistrations() {
         Long userId = AgentContext.getUserId();
@@ -61,8 +64,10 @@ public class RegistrationTools {
 
     @AgentTool(
             name = "registerLecture",
-            description = "为当前登录用户报名一场讲座。仅在用户明确要求报名时调用；" +
-                    "lectureId 必须来自 searchLectures 查询结果中的 ID，不要自行编造。",
+            domain = "registration",
+            description = "为当前登录用户报名指定的讲座。仅在用户明确要求报名时调用；"
+                    + "lectureId 必须来自 searchLectures 查询结果中的 ID，不要自行编造。"
+                    + "不适用：用户只是表达兴趣（\"想参加\"）尚未明确报名时，先询问再调用。",
             type = ToolType.WRITE
     )
     public String registerLecture(
@@ -84,8 +89,10 @@ public class RegistrationTools {
 
     @AgentTool(
             name = "cancelRegistration",
-            description = "为当前登录用户取消某场讲座的报名。仅在用户明确要求取消时调用；" +
-                    "lectureId 来自 searchLectures 或 getMyRegistrations 的结果。",
+            domain = "registration",
+            description = "为当前登录用户取消某场讲座的报名。仅在用户明确要求取消时调用；"
+                    + "lectureId 来自 searchLectures 或 getMyRegistrations 的结果。"
+                    + "不适用：用户未报名该讲座或只是询问能否取消时，先查询报名记录核实。",
             type = ToolType.WRITE
     )
     public String cancelRegistration(

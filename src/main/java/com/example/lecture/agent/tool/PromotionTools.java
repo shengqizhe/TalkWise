@@ -30,8 +30,11 @@ public class PromotionTools {
 
     @AgentTool(
             name = "generatePromotion",
+            domain = "content",
+            roles = {"admin", "teacher"},
             description = "为指定讲座生成一段宣传文案（约 150-250 字，包含亮点、适合人群、时间地点，可直接用于海报或推送）。" +
-                    "仅教师/管理员可用，教师只能为自己的讲座生成；lectureId 来自 searchLectures 结果中的 ID。"
+                    "适用：教师/管理员要为某场讲座写宣传语。教师只能为自己的讲座生成；lectureId 来自 searchLectures 结果。" +
+                    "不适用：查询讲座信息请用 searchLectures；统计数据请用 queryStatistics。"
     )
     public String generatePromotion(
             @AgentParam(name = "lectureId", description = "讲座 ID（数字，来自 searchLectures 或我的讲座列表）") Long lectureId

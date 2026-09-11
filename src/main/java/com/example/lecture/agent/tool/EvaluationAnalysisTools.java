@@ -36,8 +36,10 @@ public class EvaluationAnalysisTools {
 
     @AgentTool(
             name = "analyzeEvaluations",
-            description = "分析指定讲座的学生评价：逐条给出情感分（0-100，越高越正面）与改进建议，并汇总正面/负面情况。" +
-                    "分析结果会保存到对应评价记录中。仅教师/管理员可用，教师只能分析自己的讲座；lectureId 来自讲座列表。",
+            domain = "analysis",
+            roles = {"admin", "teacher"},
+            description = "分析指定讲座的学生评价：逐条给出情感分（0-100，越高越正面）与改进建议，并汇总正面/负面情况；" +
+                    "分析结果会保存到对应评价记录。适用：教师/管理员想了解某场讲座的口碑反馈。教师只能分析自己的讲座。",
             type = ToolType.WRITE
     )
     public String analyzeEvaluations(

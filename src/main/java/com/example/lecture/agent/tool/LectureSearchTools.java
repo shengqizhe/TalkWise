@@ -27,8 +27,10 @@ public class LectureSearchTools {
 
     @AgentTool(
             name = "searchLectures",
-            description = "查询系统里可报名的讲座。可按标题/主题关键词过滤，也可按主讲人过滤；" +
-                    "不传任何条件时返回最近发布的讲座。返回含标题、主讲人、时间、地点、报名数/容量。"
+            domain = "lecture",
+            description = "查询系统里的讲座：可按标题/主题关键词或主讲人过滤，不传条件返回最近发布的讲座；" +
+                    "返回标题、讲座ID、主讲人、时间、地点、状态。适用：用户想找讲座、要推荐、后续操作需要讲座 ID 时。"
+                    + "不适用：统计数据类问题（报名排行/分类热度/签到率）请用 queryStatistics；给讲座写宣传文案请用 generatePromotion。"
     )
     public String searchLectures(
             @AgentParam(name = "keyword", description = "讲座标题或主题关键词，可不传", required = false) String keyword,

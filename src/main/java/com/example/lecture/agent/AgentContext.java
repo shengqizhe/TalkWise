@@ -7,6 +7,7 @@ package com.example.lecture.agent;
 public final class AgentContext {
 
     private static final ThreadLocal<Long> USER_ID = new ThreadLocal<>();
+    private static final ThreadLocal<java.util.Set<String>> ROLES = new ThreadLocal<>();
 
     private AgentContext() {
     }
@@ -20,7 +21,18 @@ public final class AgentContext {
         return USER_ID.get();
     }
 
+    public static void setRoles(java.util.Set<String> roles) {
+        ROLES.set(roles == null ? java.util.Set.of() : roles);
+    }
+
+    /** 当前用户角色（小写）集合；未设置时为空集 */
+    public static java.util.Set<String> getRoles() {
+        java.util.Set<String> roles = ROLES.get();
+        return roles == null ? java.util.Set.of() : roles;
+    }
+
     public static void clear() {
         USER_ID.remove();
+        ROLES.remove();
     }
 }

@@ -35,6 +35,10 @@ public class AgentToolRegistry implements ApplicationContextAware {
         public String name;
         public String description;
         public ToolType type;
+        /** 工具域标签（路由用） */
+        public String domain;
+        /** 允许角色；空数组=公开工具 */
+        public String[] roles;
         public Object bean;
         public Method method;
         public List<ParamMeta> params = new ArrayList<>();
@@ -75,6 +79,8 @@ public class AgentToolRegistry implements ApplicationContextAware {
                 def.name = agentTool.name();
                 def.description = agentTool.description();
                 def.type = agentTool.type();
+                def.domain = agentTool.domain();
+                def.roles = agentTool.roles();
                 def.bean = bean;
                 // 从目标类取真实方法（getMethods 返回的可能是接口方法，需按名匹配实现类方法）
                 try {

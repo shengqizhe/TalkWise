@@ -39,6 +39,8 @@ public class AgentEngine {
     private final AgentProperties properties;
     private final AgentToolRegistry registry;
     private final AgentLlmClient llmClient;
+    private final ToolRouter toolRouter;
+    private final AgentRoleHelper roleHelper;
 
     /** 内存会话：userId -> 历史消息（阶段后替换为 agent_message 表） */
     private final Map<Long, List<ChatMessage>> sessions = new ConcurrentHashMap<>();
@@ -84,6 +86,9 @@ public class AgentEngine {
     }
 
     private ChatResult doChat(Long userId, String userMessage) {
+        // 角色入上下文：供工具路由做身份过滤（学生看不到管理类工具）
+        AgentContext.setRoles(roleHelper.rolesOf(userId));
+
         List<AgentToolCallRecord> usedTools = new ArrayList<>();
         List<ChatMessage> history = sessions.computeIfAbsent(userId,
                 k -> new ArrayList<>());
@@ -97,7 +102,7 @@ public class AgentEngine {
 
         int maxTurns = Math.max(1, properties.getMaxTurns());
         for (int turn = 0; turn < maxTurns; turn++) {
-            ChatResponse response = llmClient.chat(messages, buildToolSpecs());
+            ChatResponse response = llmClient.chat(messages, buildToolSpecs(userMessage));
             AiMessage ai = response.aiMessage();
 
             List<ToolExecutionRequest> requests = ai.toolExecutionRequests();
@@ -151,9 +156,14 @@ public class AgentEngine {
         return result;
     }
 
-    private List<ToolSpecification> buildToolSpecs() {
+    /**
+     * 生成工具定义：先经 ToolRouter 两层过滤（身份 + 意图域），再转成模型可读的 JSON Schema。
+     */
+    private List<ToolSpecification> buildToolSpecs(String userMessage) {
+        List<AgentToolRegistry.ToolDefinition> routed =
+                toolRouter.route(registry.allTools(), userMessage, AgentContext.getRoles());
         List<ToolSpecification> specs = new ArrayList<>();
-        for (AgentToolRegistry.ToolDefinition def : registry.allTools()) {
+        for (AgentToolRegistry.ToolDefinition def : routed) {
             Map<String, Map<String, Object>> properties = new LinkedHashMap<>();
             List<String> required = new ArrayList<>();
             for (AgentToolRegistry.ToolDefinition.ParamMeta p : def.params) {

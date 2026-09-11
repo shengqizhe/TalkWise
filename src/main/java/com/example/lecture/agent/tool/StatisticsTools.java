@@ -47,12 +47,15 @@ public class StatisticsTools {
 
     @AgentTool(
             name = "queryStatistics",
+            domain = "statistics",
+            roles = {"admin", "teacher"},
             description = "查询平台的讲座与报名统计数据，用于回答数据类问题。metric 取值：" +
                     "overview=总体概览（讲座数/报名数/本周新增报名/签到率）；" +
                     "categories=各讲座分类的热度排名（场次与报名数）；" +
                     "departments=各院系报名人数分布排名；" +
                     "top_lectures=报名人数最多的讲座排行。" +
-                    "管理员统计全平台，教师仅统计自己的讲座。"
+                    "管理员统计全平台，教师仅统计自己的讲座。" +
+                    "不适用：查询具体讲座的标题/时间等信息请用 searchLectures。"
     )
     public String queryStatistics(
             @AgentParam(name = "metric", description = "指标：overview / categories / departments / top_lectures") String metric
