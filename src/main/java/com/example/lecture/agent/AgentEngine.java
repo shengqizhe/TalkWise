@@ -24,6 +24,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Agent 对话循环引擎（唯一入口）：
@@ -45,6 +47,9 @@ public class AgentEngine {
 
     /** 内存会话：userId -> 历史消息（阶段后替换为 agent_message 表） */
     private final Map<Long, List<ChatMessage>> sessions = new ConcurrentHashMap<>();
+
+    /** 每用户一把锁：同一用户的对话串行化，防止并发请求交错污染会话历史 */
+    private final Map<Long, ReentrantLock> userLocks = new ConcurrentHashMap<>();
 
     private static final SystemMessage SYSTEM = SystemMessage.from(
             "你是「知讲 TalkWise」的智能助手，服务于大学讲座系统。"
@@ -72,10 +77,30 @@ public class AgentEngine {
 
     /**
      * 处理一条用户消息，返回最终回复与工具调用轨迹。
+     * 同一用户的请求串行化（会话历史非线程安全），最多等待 30 秒，超时则提示稍后再发。
      */
     public ChatResult chat(Long userId, String userMessage) {
+        Long key = userId == null ? -1L : userId;
+        ReentrantLock lock = userLocks.computeIfAbsent(key, k -> new ReentrantLock());
+        boolean acquired = false;
+        try {
+            acquired = lock.tryLock(30, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        if (!acquired) {
+            return new ChatResult("我还在处理你的上一条消息，请稍等片刻再发送。", List.of());
+        }
+        try {
+            return doChat(key, userMessage);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private ChatResult doChat(Long userId, String userMessage) {
         List<AgentToolCallRecord> usedTools = new ArrayList<>();
-        List<ChatMessage> history = sessions.computeIfAbsent(userId == null ? -1L : userId,
+        List<ChatMessage> history = sessions.computeIfAbsent(userId,
                 k -> new ArrayList<>());
 
         List<ChatMessage> messages = new ArrayList<>();
