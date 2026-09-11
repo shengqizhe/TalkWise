@@ -7,6 +7,22 @@
 
 ---
 
+## 2026-09-11 · 任务型 Agent：评价分析异步化（第二步）
+
+**新特性**
+- 新增 `agent_task` 表（状态/进度/结果/失败原因）+ `AgentTask` 实体与 Mapper——异步任务持久化
+- 新增 `AgentTaskRunner`：大数据量分析转后台执行（复用通用异步线程池 `taskExecutor`），期间持续更新进度，完成后经现有 WebSocket 通道推送发起用户（前端铃铛自动接收，**前端零改动**）
+- `analyzeEvaluations` 智能分流：批数 ≤ 阈值（默认 8）对话内同步返回报告；超过阈值创建后台任务并立即返回任务号
+- 新增工具 `getAnalysisTaskStatus`：对话中查任务进度/结果（"分析进度怎么样"），不传 taskId 默认查最近一次
+- 分析逻辑抽为 `EvaluationAnalysisService`（预处理/分批/Map/Reduce/报告），同步与异步共用，通过回调上报进度
+
+**变更**
+- 配置新增 `agent.analysis.async-threshold-batches`（默认 8，环境变量 `ANALYSIS_ASYNC_THRESHOLD` 可覆盖）
+
+**验证方式**：给一场讲座造 200+ 条评价 → 对话"分析《X》的评价" → 收到任务号 → 问"分析进度" → 完成后收到通知并可在对话中取报告
+
+---
+
 ## 2026-09-11 · 评价分析重构：分批 Map-Reduce（解决评论多/上下文长）
 
 **变更**

@@ -110,3 +110,4 @@ agent:
     batch-max-items: ${ANALYSIS_BATCH_MAX_ITEMS:40}                # 每批条数安全阀（防短评碎片化）
     min-content-length: ${ANALYSIS_MIN_CONTENT_LENGTH:5}           # 低于此长度的评价仅计数不分析
     reduce-input-budget-tokens: ${ANALYSIS_REDUCE_BUDGET:8000}     # Reduce 输入预算，超则两级 Reduce
+    async-threshold-batches: ${ANALYSIS_ASYNC_THRESHOLD:8}         # 批数超此值转后台异步任务

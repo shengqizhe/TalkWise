@@ -43,5 +43,8 @@ public class AgentProperties {
 
         /** 单次 Reduce 输入预算（token 估算值），超过则触发两级 Reduce */
         private int reduceInputBudgetTokens = 8000;
+
+        /** 批数超过此阈值时，评价分析转为后台异步任务（对话内同步只承载小数据量） */
+        private int asyncThresholdBatches = 8;
     }
 }

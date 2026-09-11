@@ -303,3 +303,22 @@ CREATE TABLE IF NOT EXISTS `recommendation_log` (
     CONSTRAINT `fk_recommendation_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
     CONSTRAINT `fk_recommendation_log_lecture_id` FOREIGN KEY (`lecture_id`) REFERENCES `lecture` (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='推荐记录表';
+-- ============================================================
+-- Agent 异步任务表（任务型 Agent：大数据量分析转后台执行）
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `agent_task` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+    `user_id` BIGINT NOT NULL COMMENT '发起用户ID',
+    `type` VARCHAR(50) NOT NULL COMMENT '任务类型(如 evaluation_analysis)',
+    `params` VARCHAR(500) DEFAULT NULL COMMENT '任务参数(JSON)',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/RUNNING/SUCCESS/FAILED)',
+    `progress` INT NOT NULL DEFAULT 0 COMMENT '进度百分比(0-100)',
+    `progress_text` VARCHAR(255) DEFAULT NULL COMMENT '进度说明',
+    `result` TEXT COMMENT '任务结果(文本报告)',
+    `error` VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
+    `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `finished_time` DATETIME DEFAULT NULL COMMENT '完成时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_agent_task_user` (`user_id`, `created_time`),
+    CONSTRAINT `fk_agent_task_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 异步任务表';
