@@ -66,6 +66,9 @@ function toolLabel(name) {
     getMyRegistrations: '查询我的报名',
     registerLecture: '报名讲座',
     cancelRegistration: '取消报名',
+    queryStatistics: '查询统计',
+    generatePromotion: '生成宣传文案',
+    analyzeEvaluations: '分析评价',
   }
   return map[name] || name
 }

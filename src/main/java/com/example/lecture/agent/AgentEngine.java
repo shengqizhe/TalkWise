@@ -1,9 +1,6 @@
 package com.example.lecture.agent;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.agent.tool.ToolParameters;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.data.message.AiMessage;
@@ -12,7 +9,6 @@ import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
-import jakarta.annotation.PostConstruct;
 import com.example.lecture.agent.dto.AgentToolCallRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +38,7 @@ public class AgentEngine {
 
     private final AgentProperties properties;
     private final AgentToolRegistry registry;
-
-    private ChatLanguageModel model;
+    private final AgentLlmClient llmClient;
 
     /** 内存会话：userId -> 历史消息（阶段后替换为 agent_message 表） */
     private final Map<Long, List<ChatMessage>> sessions = new ConcurrentHashMap<>();
@@ -53,23 +48,13 @@ public class AgentEngine {
 
     private static final SystemMessage SYSTEM = SystemMessage.from(
             "你是「知讲 TalkWise」的智能助手，服务于大学讲座系统。"
-                    + "你可以调用工具查询讲座、查看用户报名等。"
+                    + "你可以调用工具完成：查询讲座、查看/办理报名与取消、查询统计数据（教师/管理员）、"
+                    + "生成讲座宣传文案（教师）、分析讲座评价情感（教师）等。"
                     + "规则：1) 只有工具能拿到真实数据，回答讲座/报名类问题必须先调用相关工具，不要编造；"
                     + "2) 工具返回空结果时如实告诉用户没有找到，并给出建议；"
                     + "3) 当用户明确要求执行操作（如报名、取消报名）时，直接调用对应工具执行，并以工具返回的真实结果如实告知，不要编造执行结果；"
                     + "4) 用户意图不明确（例如只说「想参加」但没说报名）时，先询问确认再执行；"
                     + "5) 回复使用简洁自然的中文，讲座信息用要点列出。");
-
-    @PostConstruct
-    public void init() {
-        this.model = OpenAiChatModel.builder()
-                .baseUrl(properties.getBaseUrl())
-                .apiKey(properties.getApiKey())
-                .modelName(properties.getModel())
-                .temperature(0.3)
-                .build();
-        log.info("Agent 模型就绪: {} @ {}", properties.getModel(), properties.getBaseUrl());
-    }
 
     /** 一次对话的结果：最终回复 + 本次实际调用的工具轨迹（前端展示"AI 做了什么"） */
     public record ChatResult(String reply, List<AgentToolCallRecord> tools) {
@@ -112,10 +97,7 @@ public class AgentEngine {
 
         int maxTurns = Math.max(1, properties.getMaxTurns());
         for (int turn = 0; turn < maxTurns; turn++) {
-            ChatResponse response = model.chat(ChatRequest.builder()
-                    .messages(messages)
-                    .toolSpecifications(buildToolSpecs())
-                    .build());
+            ChatResponse response = llmClient.chat(messages, buildToolSpecs());
             AiMessage ai = response.aiMessage();
 
             List<ToolExecutionRequest> requests = ai.toolExecutionRequests();
