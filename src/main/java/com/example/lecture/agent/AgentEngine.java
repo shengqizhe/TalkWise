@@ -89,6 +89,12 @@ public class AgentEngine {
         // 角色入上下文：供工具路由做身份过滤（学生看不到管理类工具）
         AgentContext.setRoles(roleHelper.rolesOf(userId));
 
+        // 工具路由：本次对话的候选工具集经「身份 + 意图」过滤后固定，全程复用；
+        // 模型只能调用候选集内的工具，候选集外的调用会被运行时拒绝（防止绕过过滤）。
+        List<AgentToolRegistry.ToolDefinition> routedTools =
+                toolRouter.route(registry.allTools(), userMessage, AgentContext.getRoles());
+        List<ToolSpecification> toolSpecs = buildToolSpecs(routedTools);
+
         List<AgentToolCallRecord> usedTools = new ArrayList<>();
         List<ChatMessage> history = sessions.computeIfAbsent(userId,
                 k -> new ArrayList<>());
@@ -102,7 +108,7 @@ public class AgentEngine {
 
         int maxTurns = Math.max(1, properties.getMaxTurns());
         for (int turn = 0; turn < maxTurns; turn++) {
-            ChatResponse response = llmClient.chat(messages, buildToolSpecs(userMessage));
+            ChatResponse response = llmClient.chat(messages, toolSpecs);
             AiMessage ai = response.aiMessage();
 
             List<ToolExecutionRequest> requests = ai.toolExecutionRequests();
@@ -119,7 +125,7 @@ public class AgentEngine {
             messages.add(ai);
             for (ToolExecutionRequest request : requests) {
                 usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
-                String result = dispatch(request);
+                String result = dispatch(request, routedTools);
                 messages.add(ToolExecutionResultMessage.from(request, result));
             }
         }
@@ -138,8 +144,14 @@ public class AgentEngine {
         return value.length() > 120 ? value.substring(0, 120) + "…" : value;
     }
 
-    /** 分发工具调用：READ/WRITE 均直接执行；WRITE 记审计日志（用户明确指令即授权） */
-    private String dispatch(ToolExecutionRequest request) {
+    /** 分发工具调用：先校验在本次候选集内（拒绝候选集外调用），再执行；WRITE 记审计日志 */
+    private String dispatch(ToolExecutionRequest request,
+                            List<AgentToolRegistry.ToolDefinition> routedTools) {
+        boolean inCandidate = routedTools.stream().anyMatch(d -> d.name.equals(request.name()));
+        if (!inCandidate) {
+            log.warn("[Agent审计] 拒绝候选集外工具调用: {}", request.name());
+            return "工具不可用：" + request.name() + "（不在当前可用范围内，请使用已提供的工具完成请求）。";
+        }
         AgentToolRegistry.ToolDefinition def = registry.find(request.name());
         if (def == null) {
             return "工具不存在：" + request.name();
@@ -156,12 +168,8 @@ public class AgentEngine {
         return result;
     }
 
-    /**
-     * 生成工具定义：先经 ToolRouter 两层过滤（身份 + 意图域），再转成模型可读的 JSON Schema。
-     */
-    private List<ToolSpecification> buildToolSpecs(String userMessage) {
-        List<AgentToolRegistry.ToolDefinition> routed =
-                toolRouter.route(registry.allTools(), userMessage, AgentContext.getRoles());
+    /** 把候选工具定义转成模型可读的 JSON Schema */
+    private List<ToolSpecification> buildToolSpecs(List<AgentToolRegistry.ToolDefinition> routed) {
         List<ToolSpecification> specs = new ArrayList<>();
         for (AgentToolRegistry.ToolDefinition def : routed) {
             Map<String, Map<String, Object>> properties = new LinkedHashMap<>();
