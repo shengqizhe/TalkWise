@@ -123,11 +123,13 @@
 
 <script setup>
 import { reactive, ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
 import { useUserStore } from "../../stores/user";
 import { getEvaluationPage } from "../../api/evaluation";
 import { getLecturePage } from "../../api/lecture";
 
+const route = useRoute();
 const userStore = useUserStore();
 
 // 筛选条件
@@ -257,6 +259,10 @@ function viewEvaluation(evaluation) {
 }
 
 onMounted(async () => {
+  // 支持从其他页面带讲座 ID 直达（?lectureId=x）
+  if (route.query.lectureId) {
+    lectureFilter.value = Number(route.query.lectureId);
+  }
   await Promise.all([loadLectures(), loadEvaluations()]);
 });
 </script>

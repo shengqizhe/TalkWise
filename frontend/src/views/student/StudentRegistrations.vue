@@ -17,36 +17,99 @@
           <p>时间：{{ formatTime(booking.startTime) }}</p>
           <p>地点：{{ booking.location || '未设置' }}</p>
           <div class="card-bottom">
-            <button class="btn-status" @click="viewDetail(booking)">已预约</button>
-            <button class="btn-cancel" @click="handleCancel(booking)">取消预约</button>
+            <div class="bottom-left">
+              <button class="btn-status" @click="viewDetail(booking)">已预约</button>
+              <span v-if="booking.checkinStatus === 1" class="checkin-badge">✓ 已签到</span>
+            </div>
+            <div class="bottom-right">
+              <button v-if="canCheckin(booking)" class="btn-primary-sm" @click="handleCheckin(booking)">
+                签到
+              </button>
+              <button v-if="canEvaluate(booking)" class="btn-primary-sm" @click="openEvaluate(booking)">
+                {{ booking.evaluation ? '修改评价' : '评价' }}
+              </button>
+              <button class="btn-cancel" @click="handleCancel(booking)">取消预约</button>
+            </div>
           </div>
         </div>
       </div>
 
       <p v-else class="empty-tip">还没有预约任何讲座，去讲座列表看看吧</p>
     </div>
+
+    <!-- 评价对话框 -->
+    <el-dialog v-model="evaluateVisible" title="评价讲座" width="480px">
+      <p class="eval-lecture">《{{ evalForm.lectureTitle }}》</p>
+      <div class="eval-row">
+        <label>评分</label>
+        <el-rate v-model="evalForm.score" show-text :texts="['很差', '较差', '一般', '不错', '很棒']" />
+      </div>
+      <div class="eval-row eval-content-row">
+        <label>评价内容</label>
+        <el-input
+          v-model="evalForm.content"
+          type="textarea"
+          :rows="4"
+          maxlength="500"
+          show-word-limit
+          placeholder="说说你的感受与建议（可选）"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="evaluateVisible = false">取消</el-button>
+        <el-button type="primary" :loading="evalSubmitting" @click="submitEvaluate">提交评价</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { useUserStore } from "../../stores/user";
-import { getUserRegistrations, cancelRegistration } from "../../api/registration";
+import {
+  getUserRegistrations,
+  cancelRegistration,
+  checkinRegistration,
+} from "../../api/registration";
+import {
+  getEvaluationsByUserId,
+  createEvaluation,
+  updateEvaluation,
+} from "../../api/evaluation";
 
 const router = useRouter();
 const userStore = useUserStore();
 const bookings = ref([]);
 
-// 加载我的预约
+// 评价对话框
+const evaluateVisible = ref(false);
+const evalSubmitting = ref(false);
+const evalForm = reactive({
+  id: null,
+  lectureId: null,
+  lectureTitle: "",
+  score: 5,
+  content: "",
+});
+
+// 加载我的预约（附带：我的评价记录，用于判断"评价/修改评价"）
 async function loadBookings() {
   if (!userStore.userInfo?.id) return;
   try {
-    const res = await getUserRegistrations(userStore.userInfo.id, 1);
-    if (res.code === 200) {
-      bookings.value = res.data || [];
-    }
+    const [regRes, evalRes] = await Promise.all([
+      getUserRegistrations(userStore.userInfo.id, 1),
+      getEvaluationsByUserId(userStore.userInfo.id).catch(() => ({ data: [] })),
+    ]);
+    const evalMap = {};
+    (evalRes.data || []).forEach((ev) => {
+      evalMap[ev.lectureId] = ev;
+    });
+    bookings.value = (regRes.data || []).map((item) => ({
+      ...item,
+      evaluation: evalMap[item.lectureId] || null,
+    }));
   } catch (error) {
     console.error("加载我的预约失败:", error);
     ElMessage.error("加载我的预约失败");
@@ -61,6 +124,73 @@ function dotColor(status) {
 // 查看讲座详情
 function viewDetail(booking) {
   router.push(`/student/lectures/${booking.lectureId}`);
+}
+
+// 可签到：已确认报名且未签到
+function canCheckin(booking) {
+  return booking.status === "confirmed" && booking.checkinStatus !== 1;
+}
+
+// 签到
+async function handleCheckin(booking) {
+  try {
+    const res = await checkinRegistration(booking.id);
+    if (res.code === 200) {
+      ElMessage.success("签到成功");
+      booking.checkinStatus = 1;
+    } else {
+      ElMessage.error(res.message || "签到失败");
+    }
+  } catch (error) {
+    console.error("签到失败:", error);
+    ElMessage.error("签到失败，请稍后重试");
+  }
+}
+
+// 可评价：已确认报名且讲座已结束（lectureStatus = 3）
+function canEvaluate(booking) {
+  return booking.status === "confirmed" && booking.lectureStatus === 3;
+}
+
+// 打开评价对话框
+function openEvaluate(booking) {
+  evalForm.id = booking.evaluation?.id || null;
+  evalForm.lectureId = booking.lectureId;
+  evalForm.lectureTitle = booking.lectureTitle;
+  evalForm.score = Number(booking.evaluation?.score) || 5;
+  evalForm.content = booking.evaluation?.content || "";
+  evaluateVisible.value = true;
+}
+
+// 提交评价（新建或修改）
+async function submitEvaluate() {
+  if (!evalForm.score) {
+    ElMessage.warning("请先选择评分");
+    return;
+  }
+  evalSubmitting.value = true;
+  try {
+    const payload = {
+      id: evalForm.id,
+      lectureId: evalForm.lectureId,
+      userId: userStore.userInfo?.id,
+      score: evalForm.score,
+      content: evalForm.content,
+    };
+    const res = evalForm.id ? await updateEvaluation(payload) : await createEvaluation(payload);
+    if (res.code === 200) {
+      ElMessage.success(evalForm.id ? "评价已更新" : "评价成功，感谢反馈");
+      evaluateVisible.value = false;
+      loadBookings();
+    } else {
+      ElMessage.error(res.message || "评价提交失败");
+    }
+  } catch (error) {
+    console.error("评价提交失败:", error);
+    ElMessage.error("评价提交失败");
+  } finally {
+    evalSubmitting.value = false;
+  }
 }
 
 // 取消预约
@@ -108,7 +238,7 @@ onMounted(loadBookings);
 </script>
 
 <style scoped>
-/* ============ 以下样式数值与 student-booking.html 逐行一致 ============ */
+/* ============ 黑白极简风格（与全局一致） ============ */
 
 .student-registrations {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -185,9 +315,19 @@ onMounted(loadBookings);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
   margin-top: 24px;
   padding-top: 20px;
   border-top: 1px solid #f9f9f9;
+  flex-wrap: wrap;
+}
+
+.bottom-left,
+.bottom-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn-status {
@@ -200,6 +340,28 @@ onMounted(loadBookings);
   font-weight: 500;
   cursor: pointer;
   font-family: inherit;
+}
+
+.checkin-badge {
+  font-size: 13px;
+  color: #00b42a;
+  font-weight: 500;
+}
+
+.btn-primary-sm {
+  padding: 6px 18px;
+  background: #000;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary-sm:hover {
+  background: #333;
 }
 
 .btn-cancel {
@@ -227,7 +389,36 @@ onMounted(loadBookings);
   padding: 60px 0;
 }
 
-/* 响应式 */
+/* 评价对话框 */
+.eval-lecture {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 18px;
+}
+
+.eval-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.eval-row > label {
+  width: 70px;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.eval-content-row {
+  align-items: flex-start;
+}
+
+.eval-content-row :deep(.el-textarea) {
+  flex: 1;
+}
+
 @media (max-width: 768px) {
   .booking-grid {
     grid-template-columns: 1fr;

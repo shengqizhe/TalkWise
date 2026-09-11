@@ -31,6 +31,7 @@
               </td>
               <td>
                 <button class="btn-detail" @click="viewDetail(lecture)">查看详情</button>
+                <button class="btn-detail" @click="viewEvaluations(lecture)">评价反馈</button>
               </td>
             </tr>
           </tbody>
@@ -114,6 +115,10 @@ function formatFull(dateString) {
 
 function viewDetail(lecture) {
   router.push({ path: "/teacher/apply-list", query: { lectureId: lecture.id } });
+}
+
+function viewEvaluations(lecture) {
+  router.push({ path: "/teacher/evaluations", query: { lectureId: lecture.id } });
 }
 
 onMounted(loadData);
