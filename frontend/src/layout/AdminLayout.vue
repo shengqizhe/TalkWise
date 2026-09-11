@@ -60,6 +60,9 @@
       </main>
     </div>
 
+    <!-- 浮动 AI 助手（管理员可用自然语言查数据） -->
+    <FloatingAiBot />
+
     <!-- 个人信息对话框 -->
     <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px">
       <el-form ref="profileFormRef" :model="profileForm" label-width="100px">
@@ -131,6 +134,7 @@ import { useUserStore } from "../stores/user";
 import { updatePassword, updateUser, uploadAvatar as uploadAvatarAPI } from "../api/user";
 import { ElMessage, ElMessageBox } from "element-plus";
 import BellNotification from "../components/BellNotification.vue";
+import FloatingAiBot from "../components/FloatingAiBot.vue";
 
 const route = useRoute();
 const router = useRouter();

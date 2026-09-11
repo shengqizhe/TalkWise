@@ -13,6 +13,7 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import jakarta.annotation.PostConstruct;
+import com.example.lecture.agent.dto.AgentToolCallRecord;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -65,10 +66,15 @@ public class AgentEngine {
         log.info("Agent 模型就绪: {} @ {}", properties.getModel(), properties.getBaseUrl());
     }
 
+    /** 一次对话的结果：最终回复 + 本次实际调用的工具轨迹（前端展示"AI 做了什么"） */
+    public record ChatResult(String reply, List<AgentToolCallRecord> tools) {
+    }
+
     /**
-     * 处理一条用户消息，返回最终回复文本。
+     * 处理一条用户消息，返回最终回复与工具调用轨迹。
      */
-    public String chat(Long userId, String userMessage) {
+    public ChatResult chat(Long userId, String userMessage) {
+        List<AgentToolCallRecord> usedTools = new ArrayList<>();
         List<ChatMessage> history = sessions.computeIfAbsent(userId == null ? -1L : userId,
                 k -> new ArrayList<>());
 
@@ -94,12 +100,13 @@ public class AgentEngine {
                 history.add(UserMessage.from(userMessage));
                 history.add(AiMessage.from(reply));
                 trimHistory(history);
-                return reply;
+                return new ChatResult(reply, usedTools);
             }
 
             // 模型要调工具：把它的请求加入上下文，逐条执行后回填结果
             messages.add(ai);
             for (ToolExecutionRequest request : requests) {
+                usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
                 String result = dispatch(request);
                 messages.add(ToolExecutionResultMessage.from(request, result));
             }
@@ -109,7 +116,14 @@ public class AgentEngine {
         history.add(UserMessage.from(userMessage));
         history.add(AiMessage.from(fallback));
         trimHistory(history);
-        return fallback;
+        return new ChatResult(fallback, usedTools);
+    }
+
+    private String abbreviate(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() > 120 ? value.substring(0, 120) + "…" : value;
     }
 
     /** 分发工具调用：READ/WRITE 均直接执行；WRITE 记审计日志（用户明确指令即授权） */

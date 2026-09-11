@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { askAiAssistant, getUserRegistrations, cancelUserRegistration } from "@/api/aiAssistant";
+import { getUserRegistrations, cancelUserRegistration } from "@/api/aiAssistant";
+import { agentChat } from "@/api/agent";
 import { registerLecture as registerLectureApi, checkRegistration } from "@/api/registration";
 import { useUserStore } from "@/stores/user";
 import { useRouter } from "vue-router";
@@ -101,7 +102,6 @@ async function handleAnalyze() {
   }
   
   loading.value = true;
-  const context = history.value.map(h => (h.role === 'user' ? '用户：' : 'AI：') + h.content).join('\n');
   try {
     // 添加用户消息
     history.value.push({ 
@@ -109,11 +109,7 @@ async function handleAnalyze() {
       content: inputText.value,
       timestamp: new Date()
     });
-    const res = await askAiAssistant({
-      message: inputText.value,
-      userId: userStore.userInfo?.id,
-      context
-    });
+    const res = await agentChat(inputText.value.trim());
     // 添加AI回复
     const aiMessage = {
       role: 'ai',

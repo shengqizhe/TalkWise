@@ -36,9 +36,10 @@ public class AgentChatController {
         Long userId = StpUtil.isLogin() ? StpUtil.getLoginIdAsLong() : null;
         AgentContext.setUserId(userId);
         try {
-            String reply = agentEngine.chat(userId, message.trim());
+            AgentEngine.ChatResult result = agentEngine.chat(userId, message.trim());
             AgentChatResponse response = new AgentChatResponse();
-            response.setReply(reply);
+            response.setReply(result.reply());
+            response.setTools(result.tools());
             return Result.success(response);
         } finally {
             AgentContext.clear();
