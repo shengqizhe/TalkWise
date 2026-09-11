@@ -11,7 +11,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/university_lecture_management?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
     username: root
-    password: REDACTED-DB-PASSWORD
+    password: ${MYSQL_PASSWORD}
     
   # 日期时间格式配置
   jackson:
@@ -22,8 +22,8 @@ spring:
   mail:
     host: smtp.qq.com  # 邮件服务器地址，这里以QQ邮箱为例
     port: 587  # 邮件服务器端口
-    username: REDACTED@example.com  # 发送方邮箱
-    password: REDACTED-MAIL-CODE  # 邮箱授权码（不是登录密码）
+    username: ${MAIL_USERNAME}  # 发送方邮箱
+    password: ${MAIL_PASSWORD}  # 邮箱授权码（不是登录密码）
     default-encoding: UTF-8
     properties:
       mail:
@@ -96,9 +96,9 @@ springdoc:
     path: /v3/api-docs
   packages-to-scan: com.example.lecture.controller
 
-# Agent 配置（DeepSeek，OpenAI 兼容；支持用同名环境变量覆盖）
+# Agent 配置（DeepSeek，OpenAI 兼容；密钥必须由环境变量注入，不提供默认值）
 agent:
-  api-key: ${OPENAI_API_KEY:REDACTED-KEY}
+  api-key: ${OPENAI_API_KEY}
   base-url: ${OPENAI_BASE_URL:https://api.deepseek.com}
   model: ${OPENAI_MODEL:deepseek-v4-flash}
   max-turns: 8
