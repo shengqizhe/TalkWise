@@ -7,6 +7,17 @@
 
 ---
 
+## 2026-09-11 · 敏感信息环境变量化（安全加固）
+
+**安全**
+- MySQL 密码 / 邮箱账号与授权码 / DeepSeek API Key 全部改为环境变量注入，`application.yml` 不再含任何明文凭据
+- 启动前需设置：`MYSQL_PASSWORD`、`MAIL_USERNAME`、`MAIL_PASSWORD`、`OPENAI_API_KEY`（可用 `OPENAI_MODEL` / `OPENAI_BASE_URL` 覆盖模型与地址）
+
+**文档**
+- README 快速开始同步更新（环境变量设置说明与 Windows 示例）
+
+---
+
 ## [未发布] Agent 阶段 C（计划中）
 
 - 单步 LLM 功能点：讲座宣传文案生成、评价情感分析（落库空置字段）

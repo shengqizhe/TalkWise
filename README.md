@@ -75,14 +75,18 @@
 ### 后端启动
 ```bash
 # 1. 初始化数据库：创建库并执行脚本（src/main/resources/db 下）
-# 2. 配置 src/main/resources/application.yml
-#    - spring.datasource：数据库连接
-#    - agent.*：LLM 配置（支持 OPENAI_API_KEY / OPENAI_MODEL / OPENAI_BASE_URL 环境变量覆盖）
+# 2. 设置必需的环境变量（敏感信息不进代码库）
+#    MYSQL_PASSWORD   数据库密码
+#    MAIL_USERNAME    发件邮箱
+#    MAIL_PASSWORD    邮箱授权码
+#    OPENAI_API_KEY   LLM 密钥（DeepSeek）
+#    可选：OPENAI_MODEL / OPENAI_BASE_URL 等
 # 3. 启动
-JAVA_HOME=/path/to/jdk-17 ./mvnw spring-boot:run   # Windows 示例见下
+JAVA_HOME=/path/to/jdk-17 ./mvnw spring-boot:run
 # 服务地址 http://localhost:8080/api（Swagger: /api/swagger-ui.html）
 ```
-> Windows 提示：若系统默认 JDK 为 8，请先设置 `set JAVA_HOME=D:\jdk\jdk-17.0.14`（或对应路径）再运行 `mvnw.cmd`。
+> Windows 提示：若系统默认 JDK 为 8，请先设置 `set JAVA_HOME=D:\jdk\jdk-17.0.14`（或对应路径）再运行 `mvnw.cmd`；
+> 环境变量示例：`set MYSQL_PASSWORD=你的密码`（其余同理，启动前逐个设置）。
 
 ### 前端启动
 ```bash
