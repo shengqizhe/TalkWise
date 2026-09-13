@@ -40,6 +40,7 @@ public class AgentChatController {
             AgentChatResponse response = new AgentChatResponse();
             response.setReply(result.reply());
             response.setTools(result.tools());
+            response.setLectures(result.lectures());
             response.setAction(result.action());
             return Result.success(response);
         } finally {

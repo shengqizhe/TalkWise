@@ -11,6 +11,32 @@
           </span>
         </div>
 
+        <!-- 讲座卡片：由后端结构化数据渲染，可点击查看详情 -->
+        <div v-if="msg.lectures && msg.lectures.length" class="lecture-list">
+          <div
+            v-for="lec in msg.lectures"
+            :key="lec.id"
+            class="lecture-card"
+            @click="openLecture(lec)"
+          >
+            <div class="lecture-head">
+              <span class="lecture-title">{{ lec.title }}</span>
+              <span class="lecture-status" :class="statusClass(lec.statusText)">{{ lec.statusText }}</span>
+            </div>
+            <div class="lecture-meta">
+              <span>主讲人：{{ lec.speaker }}</span>
+              <span>时间：{{ lec.lectureTime }}</span>
+            </div>
+            <div class="lecture-meta">
+              <span>地点：{{ lec.locationName }}</span>
+              <span v-if="lec.categoryName">分类：{{ lec.categoryName }}</span>
+            </div>
+            <div v-if="lec.capacity" class="lecture-meta">
+              <span>报名：{{ lec.registeredCount || 0 }}/{{ lec.capacity }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- 写操作确认卡：创建/修改/取消/发布都需用户明确确认 -->
         <div v-if="msg.action && msg.action.status === 'PENDING'" class="action-card">
           <div class="action-card-title">{{ actionTitle(msg.action.type) }}</div>
@@ -54,7 +80,12 @@
 <script setup>
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 import { agentChat, confirmAgentAction, rejectAgentAction } from '@/api/agent'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 const inputMessage = ref('')
 const loading = ref(false)
@@ -99,6 +130,30 @@ const ACTION_TITLES = {
 
 function actionTitle(type) {
   return ACTION_TITLES[type] || '待确认操作'
+}
+
+// 状态标签配色
+function statusClass(statusText) {
+  switch (statusText) {
+    case '即将开始': return 'status-soon'
+    case '进行中': return 'status-ongoing'
+    case '已结束': return 'status-ended'
+    case '已取消': return 'status-cancelled'
+    default: return ''
+  }
+}
+
+// 点击讲座卡片跳转：学生进详情页，其他角色跳到各自讲座列表
+function openLecture(lec) {
+  if (!lec?.id) return
+  const roles = userStore.userInfo?.roles || []
+  if (roles.includes('student')) {
+    router.push(`/student/lectures/${lec.id}`)
+  } else if (roles.includes('teacher')) {
+    router.push('/teacher/lectures')
+  } else if (roles.includes('admin')) {
+    router.push('/admin/publish')
+  }
 }
 
 function confirmedMessage(data) {
@@ -148,6 +203,7 @@ async function sendMessage() {
       role: 'ai',
       content: res.data?.reply || '（未返回内容）',
       tools: res.data?.tools || [],
+      lectures: res.data?.lectures || [],
       action: res.data?.action || null,
     })
   } catch (error) {
@@ -240,6 +296,30 @@ onUnmounted(() => {
 /* 工具调用轨迹 */
 .tool-trail { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .tool-chip { font-size: 12px; color: #666; background: #f2f2f2; border-radius: 20px; padding: 3px 10px; }
+
+/* 讲座卡片：结构化数据渲染，点击查看详情 */
+.lecture-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.lecture-card {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.lecture-card:hover {
+  border-color: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+.lecture-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.lecture-title { font-size: 14px; font-weight: 600; color: #222; line-height: 1.4; }
+.lecture-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; white-space: nowrap; background: #f2f2f2; color: #666; }
+.status-soon { background: #e8f5e9; color: #2e7d32; }
+.status-ongoing { background: #e3f2fd; color: #1565c0; }
+.status-ended { background: #f5f5f5; color: #999; }
+.status-cancelled { background: #fdecea; color: #c62828; }
+.lecture-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #777; line-height: 1.7; }
 
 /* 写操作确认卡 */
 .action-card {

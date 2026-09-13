@@ -34,9 +34,18 @@ public interface LectureMapper extends BaseMapper<Lecture> {
     int updatePublishStatus(@Param("lectureId") Long lectureId, @Param("publishStatus") Integer publishStatus);
 
     /**
-     * 根据关键词模糊查询讲座（标题、摘要、内容、关键词）
+     * 根据关键词模糊查询讲座：标题、摘要、内容、关键词，以及所属分类名称。
+     *
+     * <p>分类名参与匹配是必要的：用户常按"软件工程""人工智能"这类学科方向找讲座，
+     * 而这些词往往只存在于 lecture_category.category_name，不在讲座正文里。</p>
      */
-    @Select("SELECT * FROM lecture WHERE (title LIKE CONCAT('%', #{keyword}, '%') OR summary LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%') OR keywords LIKE CONCAT('%', #{keyword}, '%')) AND deleted = 0 AND publish_status = 1")
+    @Select("SELECT l.* FROM lecture l LEFT JOIN lecture_category c ON l.category_id = c.id "
+            + "WHERE (l.title LIKE CONCAT('%', #{keyword}, '%') "
+            + "OR l.summary LIKE CONCAT('%', #{keyword}, '%') "
+            + "OR l.content LIKE CONCAT('%', #{keyword}, '%') "
+            + "OR l.keywords LIKE CONCAT('%', #{keyword}, '%') "
+            + "OR c.category_name LIKE CONCAT('%', #{keyword}, '%')) "
+            + "AND l.deleted = 0 AND l.publish_status = 1")
     List<Lecture> selectByKeyword(@Param("keyword") String keyword);
 
     /**

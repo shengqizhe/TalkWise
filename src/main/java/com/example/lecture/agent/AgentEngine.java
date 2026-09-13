@@ -10,6 +10,7 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import com.example.lecture.agent.dto.AgentToolCallRecord;
+import com.example.lecture.agent.dto.LectureCard;
 import com.example.lecture.dto.PendingActionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,10 +62,14 @@ public class AgentEngine {
                     + "5) 容量估算只返回建议，不自动创建讲座或修改 lecture.capacity；LLM 只做定性判断，容量数字以工具计算结果为准。"
                     + "6) 创建/修改/取消/发布讲座都必须先调用对应的 prepare 工具生成草稿，"
                     + "把返回的 actionId 和完整讲座字段展示为确认卡，只有用户明确确认后才由确认接口执行；不得绕过草稿直接改库。"
-                    + "7) 回复使用简洁自然的中文，讲座信息用要点列出。");
+                    + "7) 讲座列表由界面卡片直接展示给用户，你只需用一句话概述结果（例如「为你找到 3 场相关讲座」）；"
+                    + "不要逐条罗列讲座、不要输出讲座 ID、不要使用 Markdown 表格或列对齐。"
+                    + "讲座 ID 仅供你调用后续工具时使用，绝不能出现在给用户的回答里。"
+                    + "8) 回复使用简洁自然的中文，少量要点可用短横线列出。");
 
-    /** 一次对话的结果：最终回复 + 本次实际调用的工具轨迹（前端展示"AI 做了什么"） */
-    public record ChatResult(String reply, List<AgentToolCallRecord> tools, PendingActionResponse action) {
+    /** 一次对话的结果：最终回复 + 工具调用轨迹 + 查询到的讲座卡片 + 待确认动作 */
+    public record ChatResult(String reply, List<AgentToolCallRecord> tools,
+                             List<LectureCard> lectures, PendingActionResponse action) {
     }
 
     /**
@@ -81,7 +86,7 @@ public class AgentEngine {
             Thread.currentThread().interrupt();
         }
         if (!acquired) {
-            return new ChatResult("我还在处理你的上一条消息，请稍等片刻再发送。", List.of(), null);
+            return new ChatResult("我还在处理你的上一条消息，请稍等片刻再发送。", List.of(), List.of(), null);
         }
         try {
             return doChat(key, userMessage);
@@ -101,6 +106,8 @@ public class AgentEngine {
         List<ToolSpecification> toolSpecs = buildToolSpecs(routedTools);
 
         List<AgentToolCallRecord> usedTools = new ArrayList<>();
+        // 本次请求重新开始收集讲座卡片（ThreadLocal 可能被同线程的上一个请求复用）
+        AgentContext.clearLectureCards();
         List<ChatMessage> history = sessions.computeIfAbsent(userId,
                 k -> new ArrayList<>());
 
@@ -121,16 +128,22 @@ public class AgentEngine {
                 if (requests == null || requests.isEmpty()) {
                     // 模型给出最终答复
                     String reply = ai.text() == null ? "（模型未返回内容）" : ai.text();
+                    // 讲座列表已由卡片展示，这里清掉模型可能输出的表格与内部 ID
+                    reply = sanitizeReply(reply, AgentContext.getLectureCards());
                     history.add(UserMessage.from(userMessage));
                     history.add(AiMessage.from(reply));
                     trimHistory(history);
-                    return new ChatResult(reply, usedTools, extractPendingAction(messages));
+                    return new ChatResult(reply, usedTools, AgentContext.getLectureCards(),
+                            extractPendingAction(messages));
                 }
 
                 // 模型要调工具：把它的请求加入上下文，逐条执行后回填结果
                 messages.add(ai);
                 for (ToolExecutionRequest request : requests) {
-                    usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
+                    // 同一工具同名同参只记录一次，避免前端出现重复标签
+                    if (!containsToolCall(usedTools, request)) {
+                        usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
+                    }
                     String result = dispatch(request, routedTools);
                     messages.add(ToolExecutionResultMessage.from(request, result));
                 }
@@ -141,14 +154,61 @@ public class AgentEngine {
             history.add(UserMessage.from(userMessage));
             history.add(AiMessage.from(LlmUnavailableException.USER_MESSAGE));
             trimHistory(history);
-            return new ChatResult(LlmUnavailableException.USER_MESSAGE, usedTools, null);
+            return new ChatResult(LlmUnavailableException.USER_MESSAGE, usedTools, List.of(), null);
         }
 
         String fallback = "这个问题需要多步处理，我暂时没能完成，请换个问法或稍后再试。";
         history.add(UserMessage.from(userMessage));
         history.add(AiMessage.from(fallback));
         trimHistory(history);
-        return new ChatResult(fallback, usedTools, null);
+        return new ChatResult(fallback, usedTools, AgentContext.getLectureCards(), null);
+    }
+
+    /**
+     * 工具轨迹去重：同名工具只保留首次出现。
+     *
+     * <p>模型常换关键词反复调用同一工具（先"软件"再"软件工程"），
+     * 按参数去重仍会出现多个相同标签，对用户没有信息量。</p>
+     */
+    private boolean containsToolCall(List<AgentToolCallRecord> used, ToolExecutionRequest request) {
+        return used.stream().anyMatch(r -> r.getName().equals(request.name()));
+    }
+
+    /**
+     * 清洗模型回复：讲座列表已由前端卡片呈现，表格与内部 ID 不应出现在对话里。
+     *
+     * <p>提示词约束并不可靠（模型仍可能输出表格、甚至编造不存在的 ID），
+     * 因此这里由代码兜底：有卡片时剥离 Markdown 表格行与「ID：x」片段，
+     * 清理后若只剩空内容，则替换为一句概述。
+     */
+    static String sanitizeReply(String reply, List<LectureCard> cards) {
+        if (reply == null || reply.isBlank() || cards == null || cards.isEmpty()) {
+            return reply;
+        }
+        StringBuilder kept = new StringBuilder();
+        for (String line : reply.split("\n", -1)) {
+            String trimmed = line.trim();
+            // 丢弃 Markdown 表格：分隔行（|---|---|）与以 | 开头的数据行
+            if (trimmed.startsWith("|") || trimmed.matches("^\\|?[\\s\\-:|]+\\|?$")) {
+                continue;
+            }
+            // 去掉行内的「（ID：6）」「ID: 6」等内部标识
+            String cleaned = trimmed
+                    .replaceAll("[（(]\\s*ID\\s*[:：]?\\s*\\d+\\s*[）)]", "")
+                    .replaceAll("(?i)\\bID\\s*[:：]\\s*\\d+", "")
+                    .replaceAll("\\s{2,}", " ")
+                    .trim();
+            if (!cleaned.isEmpty()) {
+                kept.append(cleaned).append("\n");
+            }
+        }
+        String result = kept.toString().trim();
+        if (result.isEmpty()) {
+            return cards.size() == 1
+                    ? "为你找到 1 场相关讲座，详见下方卡片。"
+                    : "为你找到 " + cards.size() + " 场相关讲座，详见下方卡片。";
+        }
+        return result;
     }
 
     private PendingActionResponse extractPendingAction(List<ChatMessage> messages) {
