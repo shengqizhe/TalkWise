@@ -322,6 +322,20 @@ CREATE TABLE IF NOT EXISTS `recommendation_log` (
     CONSTRAINT `fk_recommendation_log_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`),
     CONSTRAINT `fk_recommendation_log_lecture_id` FOREIGN KEY (`lecture_id`) REFERENCES `lecture` (`id`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='推荐记录表';
+CREATE TABLE IF NOT EXISTS `pending_action` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '待确认动作ID',
+    `user_id` BIGINT NOT NULL COMMENT '发起用户ID',
+    `type` VARCHAR(50) NOT NULL COMMENT '动作类型',
+    `payload` JSON NOT NULL COMMENT '动作草稿快照',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/CONFIRMED/REJECTED)',
+    `result_id` BIGINT DEFAULT NULL COMMENT '确认后生成的讲座ID',
+    `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_pending_action_user_status` (`user_id`, `status`, `created_time`),
+    CONSTRAINT `fk_pending_action_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='待确认动作表';
+
 -- ============================================================
 -- Agent 异步任务表（任务型 Agent：大数据量分析转后台执行）
 -- ============================================================
@@ -329,13 +343,16 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '任务ID',
     `user_id` BIGINT NOT NULL COMMENT '发起用户ID',
     `type` VARCHAR(50) NOT NULL COMMENT '任务类型(如 evaluation_analysis)',
+    `name` VARCHAR(200) DEFAULT NULL COMMENT '任务名称',
     `params` VARCHAR(500) DEFAULT NULL COMMENT '任务参数(JSON)',
-    `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/RUNNING/SUCCESS/FAILED)',
+    `priority` INT NOT NULL DEFAULT 0 COMMENT '任务优先级',
+    `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/RUNNING/SUCCESS/FAILED/CANCELLED)',
     `progress` INT NOT NULL DEFAULT 0 COMMENT '进度百分比(0-100)',
     `progress_text` VARCHAR(255) DEFAULT NULL COMMENT '进度说明',
     `result` TEXT COMMENT '任务结果(文本报告)',
     `error` VARCHAR(500) DEFAULT NULL COMMENT '失败原因',
     `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `started_time` DATETIME DEFAULT NULL COMMENT '开始执行时间',
     `finished_time` DATETIME DEFAULT NULL COMMENT '完成时间',
     PRIMARY KEY (`id`),
     KEY `idx_agent_task_user` (`user_id`, `created_time`),
@@ -345,7 +362,11 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
 -- ============================================================
 -- 已有库升级语句（新装环境无需执行，建表语句已包含）
 -- ============================================================
--- 2026-09-11：报名表增加签到时间字段
+-- 2026-09-13：主动任务通用字段（已有库请按需执行）
+-- ALTER TABLE `agent_task` ADD COLUMN `name` VARCHAR(200) DEFAULT NULL COMMENT '任务名称' AFTER `type`;
+-- ALTER TABLE `agent_task` ADD COLUMN `priority` INT NOT NULL DEFAULT 0 COMMENT '任务优先级' AFTER `params`;
+-- ALTER TABLE `agent_task` ADD COLUMN `started_time` DATETIME DEFAULT NULL COMMENT '开始执行时间' AFTER `created_time`;
+-- ALTER TABLE `agent_task` MODIFY COLUMN `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/RUNNING/SUCCESS/FAILED/CANCELLED)';
 -- ALTER TABLE `registration` ADD COLUMN `checkin_time` DATETIME DEFAULT NULL COMMENT '签到时间' AFTER `checkin_status`;
 -- 2026-09-13：容量规划基础字段（已有库请按需执行）
 -- ALTER TABLE `location` ADD COLUMN `school_name` VARCHAR(200) DEFAULT NULL COMMENT '所属学校名称' AFTER `name`;

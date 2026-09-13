@@ -8,13 +8,14 @@ import com.example.lecture.agent.AgentRoleHelper;
 import com.example.lecture.agent.AgentTool;
 import com.example.lecture.agent.ToolType;
 import com.example.lecture.agent.service.EvaluationAnalysisService;
-import com.example.lecture.agent.task.AgentTaskRunner;
+import com.example.lecture.dto.AgentTaskCreateRequest;
 import com.example.lecture.entity.AgentTask;
 import com.example.lecture.entity.Evaluation;
 import com.example.lecture.entity.Lecture;
 import com.example.lecture.mapper.AgentTaskMapper;
 import com.example.lecture.mapper.EvaluationMapper;
 import com.example.lecture.mapper.LectureMapper;
+import com.example.lecture.service.AgentTaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class EvaluationAnalysisTools {
     private final AgentProperties properties;
     private final EvaluationAnalysisService analysisService;
     private final AgentTaskMapper taskMapper;
-    private final AgentTaskRunner taskRunner;
+    private final AgentTaskService taskService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @AgentTool(
@@ -88,18 +89,13 @@ public class EvaluationAnalysisTools {
             return analysisService.analyze(lecture, prepared, batches, null);
         }
 
-        AgentTask task = new AgentTask();
-        task.setUserId(userId);
-        task.setType(AgentTask.TYPE_EVALUATION_ANALYSIS);
         ObjectNode params = objectMapper.createObjectNode();
         params.put("lectureId", lectureId);
-        task.setParams(params.toString());
-        task.setStatus(AgentTask.STATUS_PENDING);
-        task.setProgress(0);
-        task.setProgressText("排队中");
-        taskMapper.insert(task);
-
-        taskRunner.runEvaluationAnalysis(task.getId());
+        AgentTaskCreateRequest request = new AgentTaskCreateRequest();
+        request.setType(AgentTask.TYPE_EVALUATION_ANALYSIS);
+        request.setName("《" + lecture.getTitle() + "》评价分析");
+        request.setParams(params.toString());
+        AgentTask task = taskService.create(userId, request);
 
         return "《" + lecture.getTitle() + "》评价较多（有效 " + prepared.items().size()
                 + " 条，分 " + batches.size() + " 批），已转为后台任务（任务号 " + task.getId() + "）。\n"

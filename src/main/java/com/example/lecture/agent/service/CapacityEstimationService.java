@@ -7,9 +7,11 @@ import com.example.lecture.entity.Lecture;
 import com.example.lecture.entity.LectureCategory;
 import com.example.lecture.entity.Registration;
 import com.example.lecture.entity.SchoolProfile;
+import com.example.lecture.entity.User;
 import com.example.lecture.mapper.LectureCategoryMapper;
 import com.example.lecture.mapper.LectureMapper;
 import com.example.lecture.mapper.RegistrationMapper;
+import com.example.lecture.mapper.UserMapper;
 import com.example.lecture.service.SchoolProfileService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +29,7 @@ public class CapacityEstimationService {
     private final LectureMapper lectureMapper;
     private final RegistrationMapper registrationMapper;
     private final LectureCategoryMapper categoryMapper;
+    private final UserMapper userMapper;
     private final SchoolProfileService schoolProfileService;
     private final AgentLlmClient llmClient;
     private final AgentProperties properties;
@@ -49,11 +52,15 @@ public class CapacityEstimationService {
         EstimateResult rule = estimateRule(lectures, registrations, lecturer, category, title,
                 profile, properties.getCapacity(), categoryNames);
         if (!properties.getCapacity().isLlmEnabled()) return rule;
+        User speakerProfile = lecturer == null || lecturer.isBlank() ? null
+                : userMapper.selectOne(new LambdaQueryWrapper<User>().eq(User::getRealName, lecturer.trim()));
+        String speakerContext = speakerProfile == null ? "（未找到教师资料，讲师声望只能按中性处理）"
+                : "职称/头衔：" + safe(speakerProfile.getTitle()) + "；简介：" + safe(speakerProfile.getBio());
         String prompt = "请仅输出一个 JSON 对象，不要 Markdown：{\"contentHeat\":\"HIGH|MEDIUM|LOW\","
                 + "\"speakerReputation\":\"HIGH|MEDIUM|LOW\",\"schoolFit\":\"HIGH|MEDIUM|LOW\","
                 + "\"reason\":\"不超过100字的理由\"}。不要输出容量数字。"
                 + "标题：" + safe(title) + "；简介：" + safe(summary) + "；讲师：" + safe(lecturer)
-                + "；学校画像：" + (profile == null ? "（无，schoolFit 必须为 MEDIUM）" : safe(profile.getProfileContent()));
+                + "；讲师资料：" + speakerContext + "；学校画像：" + (profile == null ? "（无，schoolFit 必须为 MEDIUM）" : safe(profile.getProfileContent()));
         for (int attempt = 0; attempt < 2; attempt++) {
             try {
                 JsonNode node = parseJson(llmClient.generateText(prompt));

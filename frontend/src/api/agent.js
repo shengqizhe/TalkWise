@@ -9,3 +9,11 @@ export function agentChat(message) {
     timeout: 60000,
   });
 }
+
+export function confirmAgentAction(actionId) {
+  return request({ url: `/agent/actions/${actionId}/confirm`, method: "post" });
+}
+
+export function rejectAgentAction(actionId) {
+  return request({ url: `/agent/actions/${actionId}/reject`, method: "post" });
+}

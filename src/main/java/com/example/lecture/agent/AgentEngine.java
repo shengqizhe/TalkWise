@@ -10,6 +10,7 @@ import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import com.example.lecture.agent.dto.AgentToolCallRecord;
+import com.example.lecture.dto.PendingActionResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -57,10 +58,11 @@ public class AgentEngine {
                     + "3) 当用户明确要求执行操作（如报名、取消报名）时，直接调用对应工具执行，并以工具返回的真实结果如实告知，不要编造执行结果；"
                     + "4) 用户意图不明确（例如只说「想参加」但没说报名）时，先询问确认再执行；"
                     + "5) 容量估算只返回建议，不自动创建讲座或修改 lecture.capacity；LLM 只做定性判断，容量数字以工具计算结果为准。"
-                    + "6) 回复使用简洁自然的中文，讲座信息用要点列出。");
+                    + "6) 创建讲座时先调用 prepareLectureCreation 生成草稿；必须把返回的 actionId 和完整讲座字段展示为确认卡，只有用户明确确认后才调用确认接口。"
+                    + "7) 回复使用简洁自然的中文，讲座信息用要点列出。");
 
     /** 一次对话的结果：最终回复 + 本次实际调用的工具轨迹（前端展示"AI 做了什么"） */
-    public record ChatResult(String reply, List<AgentToolCallRecord> tools) {
+    public record ChatResult(String reply, List<AgentToolCallRecord> tools, PendingActionResponse action) {
     }
 
     /**
@@ -77,7 +79,7 @@ public class AgentEngine {
             Thread.currentThread().interrupt();
         }
         if (!acquired) {
-            return new ChatResult("我还在处理你的上一条消息，请稍等片刻再发送。", List.of());
+            return new ChatResult("我还在处理你的上一条消息，请稍等片刻再发送。", List.of(), null);
         }
         try {
             return doChat(key, userMessage);
@@ -119,7 +121,7 @@ public class AgentEngine {
                 history.add(UserMessage.from(userMessage));
                 history.add(AiMessage.from(reply));
                 trimHistory(history);
-                return new ChatResult(reply, usedTools);
+                return new ChatResult(reply, usedTools, extractPendingAction(messages));
             }
 
             // 模型要调工具：把它的请求加入上下文，逐条执行后回填结果
@@ -135,7 +137,21 @@ public class AgentEngine {
         history.add(UserMessage.from(userMessage));
         history.add(AiMessage.from(fallback));
         trimHistory(history);
-        return new ChatResult(fallback, usedTools);
+        return new ChatResult(fallback, usedTools, null);
+    }
+
+    private PendingActionResponse extractPendingAction(List<ChatMessage> messages) {
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            ChatMessage message = messages.get(i);
+            if (message instanceof ToolExecutionResultMessage result && result.text() != null) {
+                try {
+                    if (result.text().contains("\"actionId\"") && result.text().contains("\"status\":\"PENDING\"")) {
+                        return new com.fasterxml.jackson.databind.ObjectMapper().readValue(result.text(), PendingActionResponse.class);
+                    }
+                } catch (Exception ignored) { }
+            }
+        }
+        return null;
     }
 
     private String abbreviate(String value) {

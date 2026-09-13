@@ -27,7 +27,7 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class AgentTaskRunner {
+public class AgentTaskRunner implements AgentTaskExecutor {
 
     private final AgentTaskMapper taskMapper;
     private final LectureMapper lectureMapper;
@@ -35,6 +35,18 @@ public class AgentTaskRunner {
     private final EvaluationAnalysisService analysisService;
     private final WebSocketService webSocketService;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** 评价分析任务：提交后立即返回，结果异步产出 */
+    @Override
+    @Async("taskExecutor")
+    public void execute(AgentTask task) {
+        runEvaluationAnalysis(task.getId());
+    }
+
+    @Override
+    public String getTaskType() {
+        return AgentTask.TYPE_EVALUATION_ANALYSIS;
+    }
 
     /** 评价分析任务：提交后立即返回，结果异步产出 */
     @Async("taskExecutor")
@@ -68,6 +80,10 @@ public class AgentTaskRunner {
                     updateProgress(taskId, 5 + (int) (done * 90.0 / total),
                             "正在分析第 " + done + "/" + total + " 批"));
 
+            AgentTask latest = taskMapper.selectById(taskId);
+            if (latest == null || AgentTask.STATUS_CANCELLED.equals(latest.getStatus())) {
+                return;
+            }
             finish(taskId, report);
             notifyUser(task.getUserId(), taskId, "《" + lecture.getTitle() + "》评价分析完成，可以查看报告了。");
         } catch (Exception e) {
@@ -78,15 +94,24 @@ public class AgentTaskRunner {
     }
 
     private void updateProgress(Long taskId, int progress, String text) {
+        AgentTask current = taskMapper.selectById(taskId);
+        if (current == null || AgentTask.STATUS_CANCELLED.equals(current.getStatus())) {
+            return;
+        }
         AgentTask update = new AgentTask();
         update.setId(taskId);
         update.setStatus(AgentTask.STATUS_RUNNING);
+        update.setStartedTime(LocalDateTime.now());
         update.setProgress(Math.min(progress, 100));
         update.setProgressText(text);
         taskMapper.updateById(update);
     }
 
     private void finish(Long taskId, String report) {
+        AgentTask current = taskMapper.selectById(taskId);
+        if (current == null || AgentTask.STATUS_CANCELLED.equals(current.getStatus())) {
+            return;
+        }
         AgentTask update = new AgentTask();
         update.setId(taskId);
         update.setStatus(AgentTask.STATUS_SUCCESS);
@@ -98,6 +123,10 @@ public class AgentTaskRunner {
     }
 
     private void fail(Long taskId, String error) {
+        AgentTask current = taskMapper.selectById(taskId);
+        if (current == null || AgentTask.STATUS_CANCELLED.equals(current.getStatus())) {
+            return;
+        }
         AgentTask update = new AgentTask();
         update.setId(taskId);
         update.setStatus(AgentTask.STATUS_FAILED);

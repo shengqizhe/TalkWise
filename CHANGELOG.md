@@ -1,4 +1,9 @@
-# 更新日志（Changelog）
+## 2026-09-13 · Agent 扩展：确认式创建与通用主动任务
+
+- 删除旧 `/api/ai/*` Controller、Service、DTO 及前端 API，统一使用 `/api/agent/chat`。
+- 新增讲座草稿确认动作：`prepareLectureCreation`、`/api/agent/actions/{id}/confirm`、`/api/agent/actions/{id}/reject`。
+- 新增通用主动任务接口和执行器注册表，保留评价分析异步任务。
+
 
 **知讲 TalkWise** — 大学讲座智能平台（Spring Boot 3 + Vue 3 + LangChain4j Agent）
 

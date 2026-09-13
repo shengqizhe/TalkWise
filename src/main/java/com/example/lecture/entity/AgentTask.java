@@ -18,6 +18,7 @@ public class AgentTask {
     public static final String STATUS_RUNNING = "RUNNING";
     public static final String STATUS_SUCCESS = "SUCCESS";
     public static final String STATUS_FAILED = "FAILED";
+    public static final String STATUS_CANCELLED = "CANCELLED";
 
     public static final String TYPE_EVALUATION_ANALYSIS = "evaluation_analysis";
 
@@ -38,12 +39,22 @@ public class AgentTask {
     private String type;
 
     /**
+     * 任务名称
+     */
+    private String name;
+
+    /**
      * 任务参数（JSON，如 {"lectureId": 12}）
      */
     private String params;
 
     /**
-     * 状态：PENDING / RUNNING / SUCCESS / FAILED
+     * 任务优先级
+     */
+    private Integer priority;
+
+    /**
+     * 状态：PENDING / RUNNING / SUCCESS / FAILED / CANCELLED
      */
     private String status;
 
@@ -71,6 +82,11 @@ public class AgentTask {
      * 创建时间
      */
     private LocalDateTime createdTime;
+
+    /**
+     * 开始执行时间
+     */
+    private LocalDateTime startedTime;
 
     /**
      * 完成时间
