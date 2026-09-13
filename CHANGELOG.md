@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-09-13 · README 与实现对齐：AI 入口、docs 清单、mvnw 与 IDEA 环境变量
+
+**变更**
+- README 修正 AI 助手入口描述：`AgentDrawer` 已在 `d88679b` 中从悬浮球改为顶栏常驻 `✨ AI 助手` 按钮 + 右侧抽屉，此前"悬浮球""右下角 🤖 悬浮球"共 4 处表述已同步更新（含架构图与组件目录说明）。
+- README 补充 `docs/` 实际文件清单：新增 `tool-routing.md`、`容量规划-会话交接.md`。
+- README 修正对话轮数表述：`最多 8 轮` 实为可配置项 `agent.max-turns`（默认 8），改为准确措辞。
+- README 修正已失效的 `mvnw` 表述：`mvnw` / `mvnw.cmd` 与 `.mvn` wrapper 已在 `9a47805` 移除，启动命令改用系统 `mvn`。
+- README 新增「IDEA 中启动（EnvFile 插件）」小节：说明 `Could not resolve placeholder 'MAIL_USERNAME'` 的成因（Spring Boot 不读取 `.env`）与 EnvFile 配置步骤。
+
+**修复**
+- 修正文档与代码不一致导致的误导：按原 README 找不到悬浮球入口，照 `./mvnw` 操作则直接失败。
+
+---
+
 ## 2026-09-13 · 确认动作四类化、教室推荐、任务调度与容量明细
 
 **新特性**

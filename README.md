@@ -31,7 +31,7 @@
 - **评价分析**（教师）："分析一下《XX》的评价"——自动分批（Map-Reduce，上千条评价也能处理）从评价中提炼主要问题、正面反馈与可行动的改进建议；数据量大时自动转后台任务（进度可查、完成后通知）
 - **写操作直接执行**：用户明确指令即授权（身份取自登录态、业务规则 Service 层兜底、写操作全程审计日志）
 - **工具调用轨迹**：回复下方展示 `🔧 查询讲座 / 🔧 报名讲座`，直观呈现"AI 做了什么"
-- 三端可用（悬浮球入口，管理员控制台同样接入）
+- 三端可用（顶栏 `✨ AI 助手` 入口，右侧抽屉展开，管理员控制台同样接入）
 
 ---
 
@@ -50,12 +50,12 @@
 
 ```
 前端（Vue 3，黑白极简风格，三端布局：学生/教师通用顶栏 + 管理员控制台）
-   │  REST /api/**（Sa-Token 认证）     悬浮球 → POST /api/agent/chat
+   │  REST /api/**（Sa-Token 认证）     顶栏 AI 助手 → POST /api/agent/chat
    ▼
 后端（Spring Boot）
    ├── controller / service / mapper      业务 CRUD（讲座/报名/签到/评价/统计）
    └── agent 模块（独立，只调 Service，不写 SQL）
-        ├── AgentEngine        对话循环：模型 ↔ 工具执行（最多 8 轮）
+        ├── AgentEngine        对话循环：模型 ↔ 工具执行（轮数上限 `agent.max-turns`，默认 8）
         ├── AgentToolRegistry  扫描 @AgentTool 注解，注册工具并反射执行
         ├── AgentTaskScheduler 主动任务调度：优先级抢占、退避重试、卡死回收
         ├── tools              查讲座/报名/统计/文案/评价/容量/教室推荐/讲座写操作草稿
@@ -120,7 +120,7 @@ npm run build   # 生产构建
 ```
 
 ### 体验 AI Agent
-登录任一角色后，点击右下角 🤖 悬浮球：
+登录任一角色后，点击顶栏的 `✨ AI 助手` 按钮，右侧会滑出对话抽屉：
 - "最近有什么讲座？"
 - "帮我报名《讲座名》"
 - "我报了哪些讲座？"
@@ -134,7 +134,7 @@ npm run build   # 生产构建
 │   └── src/
 │       ├── views/                   # 学生/教师/管理员三端页面
 │       ├── layout/                  # 全局布局 + 管理员控制台布局
-│       ├── components/              # 悬浮 AI 助手、通知铃铛等
+│       ├── components/              # AI 助手抽屉与对话面板、通知铃铛等
 │       └── styles/theme.css         # 黑白主题（Element Plus 变量覆盖）
 ├── src/main/java/com/example/
 │   ├── lecture/                     # 业务代码（controller/service/mapper/entity）
@@ -142,6 +142,8 @@ npm run build   # 生产构建
 │   └── university_lecture_management_system/   # 启动类
 ├── docs/
 │   ├── agent-改造方案.md             # Agent 化方案与实施阶段（持续更新）
+│   ├── tool-routing.md              # 工具路由：分层筛选与身份/意图双层过滤设计
+│   ├── 容量规划-会话交接.md           # 容量估算实现与后续阶段交接
 │   └── dynamic-reminder-guide.md    # 动态提醒配置
 ├── CHANGELOG.md                     # 变更日志（每次提交追加）
 └── README.md                        # 本文件
