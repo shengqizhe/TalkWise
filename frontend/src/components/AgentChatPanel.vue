@@ -152,7 +152,8 @@ async function sendMessage() {
     })
   } catch (error) {
     console.error('Agent 请求失败:', error)
-    chatHistory.value.push({ role: 'ai', content: '抱歉，AI 服务暂时不可用，请稍后再试。' })
+    // 后端已对模型故障统一返回固定文案；这里兜底网络/网关层失败
+    chatHistory.value.push({ role: 'ai', content: '抱歉！功能失效，请联系管理员修复。' })
   } finally {
     loading.value = false
     await nextTick()

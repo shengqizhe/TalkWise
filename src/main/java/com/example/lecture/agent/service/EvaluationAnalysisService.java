@@ -2,6 +2,7 @@ package com.example.lecture.agent.service;
 
 import com.example.lecture.agent.AgentLlmClient;
 import com.example.lecture.agent.AgentProperties;
+import com.example.lecture.agent.LlmUnavailableException;
 import com.example.lecture.entity.Evaluation;
 import com.example.lecture.entity.Lecture;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -109,11 +110,12 @@ public class EvaluationAnalysisService {
             }
         }
         if (batchResults.isEmpty()) {
-            return "评价分析失败：全部批次未能得到有效结果，请稍后重试。";
+            // 全部批次无有效结果：本质是模型调用故障（真实原因已在客户端层记日志）
+            return LlmUnavailableException.USER_MESSAGE;
         }
         JsonNode report = reduceTree(batchResults, lecture.getTitle(), 0);
         if (report == null) {
-            return "评价分析失败：汇总阶段未能得到有效结果，请稍后重试。";
+            return LlmUnavailableException.USER_MESSAGE;
         }
         return formatReport(lecture.getTitle(), prepared, batches.size(), failedBatches, report);
     }

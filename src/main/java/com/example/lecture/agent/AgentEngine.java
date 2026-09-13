@@ -112,27 +112,36 @@ public class AgentEngine {
         messages.add(UserMessage.from(userMessage));
 
         int maxTurns = Math.max(1, properties.getMaxTurns());
-        for (int turn = 0; turn < maxTurns; turn++) {
-            ChatResponse response = llmClient.chat(messages, toolSpecs);
-            AiMessage ai = response.aiMessage();
+        try {
+            for (int turn = 0; turn < maxTurns; turn++) {
+                ChatResponse response = llmClient.chat(messages, toolSpecs);
+                AiMessage ai = response.aiMessage();
 
-            List<ToolExecutionRequest> requests = ai.toolExecutionRequests();
-            if (requests == null || requests.isEmpty()) {
-                // 模型给出最终答复
-                String reply = ai.text() == null ? "（模型未返回内容）" : ai.text();
-                history.add(UserMessage.from(userMessage));
-                history.add(AiMessage.from(reply));
-                trimHistory(history);
-                return new ChatResult(reply, usedTools, extractPendingAction(messages));
-            }
+                List<ToolExecutionRequest> requests = ai.toolExecutionRequests();
+                if (requests == null || requests.isEmpty()) {
+                    // 模型给出最终答复
+                    String reply = ai.text() == null ? "（模型未返回内容）" : ai.text();
+                    history.add(UserMessage.from(userMessage));
+                    history.add(AiMessage.from(reply));
+                    trimHistory(history);
+                    return new ChatResult(reply, usedTools, extractPendingAction(messages));
+                }
 
-            // 模型要调工具：把它的请求加入上下文，逐条执行后回填结果
-            messages.add(ai);
-            for (ToolExecutionRequest request : requests) {
-                usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
-                String result = dispatch(request, routedTools);
-                messages.add(ToolExecutionResultMessage.from(request, result));
+                // 模型要调工具：把它的请求加入上下文，逐条执行后回填结果
+                messages.add(ai);
+                for (ToolExecutionRequest request : requests) {
+                    usedTools.add(new AgentToolCallRecord(request.name(), abbreviate(request.arguments())));
+                    String result = dispatch(request, routedTools);
+                    messages.add(ToolExecutionResultMessage.from(request, result));
+                }
             }
+        } catch (LlmUnavailableException e) {
+            // 模型故障：给用户统一提示，真实原因已在客户端层记日志
+            log.error("[Agent模型故障] 用户 {} 会话中断，已调用工具 {}", userId, usedTools.size());
+            history.add(UserMessage.from(userMessage));
+            history.add(AiMessage.from(LlmUnavailableException.USER_MESSAGE));
+            trimHistory(history);
+            return new ChatResult(LlmUnavailableException.USER_MESSAGE, usedTools, null);
         }
 
         String fallback = "这个问题需要多步处理，我暂时没能完成，请换个问法或稍后再试。";

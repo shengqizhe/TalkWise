@@ -5,6 +5,7 @@ import com.example.lecture.agent.AgentLlmClient;
 import com.example.lecture.agent.AgentParam;
 import com.example.lecture.agent.AgentRoleHelper;
 import com.example.lecture.agent.AgentTool;
+import com.example.lecture.agent.LlmUnavailableException;
 import com.example.lecture.entity.Lecture;
 import com.example.lecture.entity.Location;
 import com.example.lecture.mapper.LectureMapper;
@@ -73,11 +74,12 @@ public class PromotionTools {
         try {
             String text = llmClient.generateText(prompt);
             if (text == null || text.isBlank()) {
-                return "文案生成失败，请稍后重试。";
+                return LlmUnavailableException.USER_MESSAGE;
             }
             return "《" + lecture.getTitle() + "》宣传文案：\n\n" + text.trim();
         } catch (Exception e) {
-            return "文案生成失败：" + e.getMessage() + "。";
+            // 真实原因已在 AgentLlmClient 记日志，这里只回统一文案
+            return LlmUnavailableException.USER_MESSAGE;
         }
     }
 }

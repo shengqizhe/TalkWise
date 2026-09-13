@@ -1,5 +1,6 @@
 package com.example.lecture.agent.task;
 
+import com.example.lecture.agent.LlmUnavailableException;
 import com.example.lecture.entity.AgentTask;
 import com.example.lecture.mapper.AgentTaskMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -178,7 +179,7 @@ public class AgentTaskScheduler {
      */
     void handleFailure(AgentTask task, Exception error) {
         Long taskId = task.getId();
-        String message = AgentTaskExecutionSupport.truncateError(error.getMessage());
+        String message = AgentTaskExecutionSupport.truncateError(rootMessage(error));
         log.error("主动任务执行失败（taskId={}, type={}）：{}", taskId, task.getType(), message, error);
 
         if (AgentTaskRetryPolicy.canRetry(task.getRetryCount(), task.getMaxRetries())) {
@@ -195,7 +196,21 @@ public class AgentTaskScheduler {
         int updated = taskMapper.markFailed(taskId,
                 task.getRetryCount() == null ? 0 : task.getRetryCount(), message, LocalDateTime.now());
         if (updated == 1) {
-            support.notifyUser(task.getUserId(), taskId, "任务执行失败：" + message);
+            // 对用户只给统一文案；供应商报文等真实原因已进日志（见上方 log.error）
+            support.notifyUser(task.getUserId(), taskId,
+                    LlmUnavailableException.isModelFailure(error)
+                            ? LlmUnavailableException.USER_MESSAGE
+                            : "任务执行失败，请联系管理员排查。");
         }
+    }
+
+    /** 取异常链最内层的可读原因，用于落库与日志 */
+    private static String rootMessage(Throwable e) {
+        Throwable cur = e;
+        while (cur.getCause() != null && cur.getCause() != cur) {
+            cur = cur.getCause();
+        }
+        String msg = cur.getMessage();
+        return msg == null || msg.isBlank() ? cur.getClass().getSimpleName() : msg;
     }
 }

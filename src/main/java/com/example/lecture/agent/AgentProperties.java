@@ -21,6 +21,12 @@ public class AgentProperties {
     /** 模型名，如 qwen-turbo / qwen-plus */
     private String model;
 
+    /** 单次模型调用超时（秒）；中转站通常比直连慢，可按需调大 */
+    private int timeoutSeconds = 60;
+
+    /** 模型调用失败自动重试次数（针对限流/瞬时 5xx 等可恢复错误） */
+    private int maxRetries = 2;
+
     /** 单次对话最大工具轮数 */
     private int maxTurns = 8;
 

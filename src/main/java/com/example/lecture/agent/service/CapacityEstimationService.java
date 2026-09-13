@@ -3,6 +3,7 @@ package com.example.lecture.agent.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.lecture.agent.AgentLlmClient;
 import com.example.lecture.agent.AgentProperties;
+import com.example.lecture.agent.LlmUnavailableException;
 import com.example.lecture.entity.Lecture;
 import com.example.lecture.entity.LectureCategory;
 import com.example.lecture.entity.Registration;
@@ -16,6 +17,7 @@ import com.example.lecture.service.SchoolProfileService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -23,6 +25,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /** 讲座容量估算：有效历史报名形成统计基准，LLM 只输出三维定性判断。 */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CapacityEstimationService {
@@ -78,7 +81,9 @@ public class CapacityEstimationService {
         for (int attempt = 0; attempt < 2; attempt++) {
             try {
                 JsonNode node = parseJson(llmClient.generateText(prompt));
-                if (!valid(node)) continue;
+                if (!valid(node)) {
+                    continue;
+                }
                 String heat = level(node, "contentHeat");
                 String reputation = level(node, "speakerReputation");
                 String fit = level(node, "schoolFit");
@@ -88,11 +93,15 @@ public class CapacityEstimationService {
                 double sf = profileUsed ? properties.getCapacity().getSchoolFit().getOrDefault(fit, 1.0) : 1.0;
                 return rule.withSemantic(heat, reputation, fit, node.path("reason").asText(),
                         hf, rf, sf, properties.getCapacity().getRoundTo());
-            } catch (Exception ignored) {
-                // 重试一次；两次都失败则降级到可解释的规则结果
+            } catch (LlmUnavailableException e) {
+                // 模型故障不静默降级：上抛，由工具层统一提示管理员修复
+                throw e;
+            } catch (Exception e) {
+                log.warn("容量语义评估第 {} 次解析失败：{}", attempt + 1, e.getMessage());
             }
         }
-        return rule.withLlmFallback("LLM 定性结果不可用，已使用统计基线");
+        // 两次都拿不到合法定性结果，视为模型功能失效，不给出可能误导的统计基线
+        throw new LlmUnavailableException("容量语义评估连续两次未返回合法结果");
     }
 
     public static EstimateResult estimateRule(List<Lecture> lectures, List<Registration> registrations,
@@ -165,7 +174,7 @@ public class CapacityEstimationService {
                 : "使用有效历史报名统计（排除已取消报名）";
         return new EstimateResult(value, (int) Math.ceil(base), 1.0,
                 s1.average(), s2.average(), s3.average(),
-                fallback, reason, false, "MEDIUM", "MEDIUM", "MEDIUM", 1.0, 1.0, 1.0,
+                fallback, reason, "MEDIUM", "MEDIUM", "MEDIUM", 1.0, 1.0, 1.0,
                 value, value, detail);
     }
 
@@ -265,7 +274,7 @@ public class CapacityEstimationService {
 
     public record EstimateResult(int capacity, int baseCapacity, double factor,
                                  double lecturerFactor, double categoryFactor, double keywordFactor,
-                                 boolean sampleFallback, String reason, boolean llmFallback,
+                                 boolean sampleFallback, String reason,
                                  String contentHeat, String speakerReputation, String schoolFit,
                                  double contentHeatFactor, double speakerReputationFactor, double schoolFitFactor,
                                  int confidenceLow, int confidenceHigh, Detail detail) {
@@ -273,7 +282,7 @@ public class CapacityEstimationService {
         /** 标记学校画像与教师资料是否真正参与判断 */
         EstimateResult withContext(boolean profileUsed, boolean speakerProfileUsed) {
             return new EstimateResult(capacity, baseCapacity, factor, lecturerFactor, categoryFactor, keywordFactor,
-                    sampleFallback, reason, llmFallback, contentHeat, speakerReputation, schoolFit,
+                    sampleFallback, reason, contentHeat, speakerReputation, schoolFit,
                     contentHeatFactor, speakerReputationFactor, schoolFitFactor,
                     confidenceLow, confidenceHigh, detail.withUse(profileUsed, speakerProfileUsed));
         }
@@ -286,16 +295,9 @@ public class CapacityEstimationService {
             int low = clampRound(detail.baseLow() * f, detail.roomMin(), detail.roomMax(), roundTo);
             int high = clampRound(detail.baseHigh() * f, detail.roomMin(), detail.roomMax(), roundTo);
             return new EstimateResult(value, baseCapacity, f, lecturerFactor, categoryFactor, keywordFactor,
-                    sampleFallback, reason + "；语义判断：" + semanticReason, false, heat, reputation, fit,
+                    sampleFallback, reason + "；语义判断：" + semanticReason, heat, reputation, fit,
                     heatFactor, reputationFactor, fitFactor,
                     Math.min(low, high), Math.max(low, high), detail);
-        }
-
-        EstimateResult withLlmFallback(String note) {
-            return new EstimateResult(capacity, baseCapacity, factor, lecturerFactor, categoryFactor, keywordFactor,
-                    sampleFallback, reason + "；" + note, true, contentHeat, speakerReputation, schoolFit,
-                    contentHeatFactor, speakerReputationFactor, schoolFitFactor,
-                    confidenceLow, confidenceHigh, detail);
         }
 
         /** 边界裁剪 + 向上取整；min/max 为 0 表示该侧无约束 */

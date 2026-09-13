@@ -99,8 +99,12 @@ springdoc:
 # Agent 配置（DeepSeek，OpenAI 兼容；密钥必须由环境变量注入，不提供默认值）
 agent:
   api-key: ${OPENAI_API_KEY}
+  # 兼容 OpenAI 协议的中转站：填到 /v1 结尾最稳妥；只填域名时会自动补 /v1
   base-url: ${OPENAI_BASE_URL:https://api.deepseek.com}
   model: ${OPENAI_MODEL:deepseek-v4-flash}
+  # 中转站通常比直连慢，超时与重试可按需调大
+  timeout-seconds: ${OPENAI_TIMEOUT_SECONDS:60}
+  max-retries: ${OPENAI_MAX_RETRIES:2}
   max-turns: 8
   max-tool-result-chars: 2000
 

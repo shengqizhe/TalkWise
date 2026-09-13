@@ -4,6 +4,7 @@ import com.example.lecture.agent.AgentContext;
 import com.example.lecture.agent.AgentParam;
 import com.example.lecture.agent.AgentRoleHelper;
 import com.example.lecture.agent.AgentTool;
+import com.example.lecture.agent.LlmUnavailableException;
 import com.example.lecture.agent.service.CapacityEstimationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,13 @@ public class CapacityTools {
         Long userId = AgentContext.getUserId();
         if (userId == null) return "请先登录后再估算讲座容量。";
         if (!roleHelper.isAdmin(userId) && !roleHelper.isTeacher(userId)) return "容量估算功能面向教师与管理员开放。";
-        CapacityEstimationService.EstimateResult r = service.estimateWithLlm(title, summary, lecturer, category, schoolName);
+        CapacityEstimationService.EstimateResult r;
+        try {
+            r = service.estimateWithLlm(title, summary, lecturer, category, schoolName);
+        } catch (LlmUnavailableException e) {
+            // 真实原因已在客户端层记日志
+            return LlmUnavailableException.USER_MESSAGE;
+        }
         CapacityEstimationService.Detail d = r.detail();
         StringBuilder sb = new StringBuilder();
         sb.append("建议容量：").append(r.capacity()).append(" 人\n");
@@ -49,9 +56,6 @@ public class CapacityTools {
         sb.append("语义判断：内容热度=").append(r.contentHeat()).append("（").append(format(r.contentHeatFactor())).append("），讲师声望=")
                 .append(r.speakerReputation()).append("（").append(format(r.speakerReputationFactor())).append("），校本契合度=")
                 .append(r.schoolFit()).append("（").append(format(r.schoolFitFactor())).append("）\n");
-        if (r.llmFallback()) {
-            sb.append("不确定性：LLM 定性判断不可用，结果为纯统计数据\n");
-        }
         sb.append("说明：").append(r.reason());
         return sb.toString();
     }
