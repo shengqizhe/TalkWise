@@ -73,12 +73,6 @@ const routes = [
         component: () => import("../views/student/StudentProfile.vue"),
         meta: { roles: ["student"] },
       },
-      {
-        path: "student/ai",
-        name: "StudentAi",
-        component: () => import("../views/student/StudentAi.vue"),
-        meta: { roles: ["student"] },
-      },
       // 教师路由
       {
         path: "teacher/dashboard",

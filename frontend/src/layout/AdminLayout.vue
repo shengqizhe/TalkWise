@@ -17,6 +17,7 @@
         </nav>
       </div>
       <div class="user-area">
+        <AgentDrawer />
         <BellNotification />
         <el-dropdown trigger="click" @command="handleCommand">
           <div class="user-trigger">
@@ -59,9 +60,6 @@
         <router-view />
       </main>
     </div>
-
-    <!-- 浮动 AI 助手（管理员可用自然语言查数据） -->
-    <FloatingAiBot />
 
     <!-- 个人信息对话框 -->
     <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px">
@@ -133,8 +131,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useUserStore } from "../stores/user";
 import { updatePassword, updateUser, uploadAvatar as uploadAvatarAPI } from "../api/user";
 import { ElMessage, ElMessageBox } from "element-plus";
+import AgentDrawer from "../components/AgentDrawer.vue";
 import BellNotification from "../components/BellNotification.vue";
-import FloatingAiBot from "../components/FloatingAiBot.vue";
 
 const route = useRoute();
 const router = useRouter();
