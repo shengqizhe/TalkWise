@@ -104,6 +104,30 @@ agent:
   max-turns: 8
   max-tool-result-chars: 2000
 
+  capacity:
+    default-capacity: ${CAPACITY_DEFAULT:100}
+    min-sample-lectures: ${CAPACITY_MIN_SAMPLE_LECTURES:5}
+    min-capacity-ratio: ${CAPACITY_MIN_RATIO:3.0}
+    min-factor: ${CAPACITY_MIN_FACTOR:0.5}
+    max-factor: ${CAPACITY_MAX_FACTOR:2.0}
+    lecturer-weight: ${CAPACITY_LECTURER_WEIGHT:0.4}
+    category-weight: ${CAPACITY_CATEGORY_WEIGHT:0.3}
+    keyword-weight: ${CAPACITY_KEYWORD_WEIGHT:0.3}
+    content-heat:
+      HIGH: 1.30
+      MEDIUM: 1.00
+      LOW: 0.80
+    speaker-reputation:
+      HIGH: 1.20
+      MEDIUM: 1.00
+      LOW: 0.85
+    school-fit:
+      HIGH: 1.30
+      MEDIUM: 1.00
+      LOW: 0.80
+    round-to: ${CAPACITY_ROUND_TO:10}
+    llm-enabled: ${CAPACITY_LLM_ENABLED:true}
+
   # 评价分析分批参数（标定值：换模型或调优后请同步更新，可用环境变量覆盖）
   analysis:
     batch-max-tokens: ${ANALYSIS_BATCH_MAX_TOKENS:3000}            # 每批内容预算（token 估算），一级参数

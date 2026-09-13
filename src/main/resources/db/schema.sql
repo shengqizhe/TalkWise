@@ -16,18 +16,34 @@ CREATE TABLE IF NOT EXISTS `department` (
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系别表';
 
 
+-- 学校画像表
+CREATE TABLE IF NOT EXISTS `school_profile` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '学校画像ID',
+    `school_name` VARCHAR(200) NOT NULL COMMENT '学校名称',
+    `profile_content` TEXT DEFAULT NULL COMMENT '办学定位、优势学科与学生群体画像',
+    `min_room_capacity` INT NOT NULL DEFAULT 0 COMMENT '地点最小容量',
+    `max_room_capacity` INT NOT NULL DEFAULT 0 COMMENT '地点最大容量',
+    `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_school_profile_name` (`school_name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学校画像表';
+
 -- 地点表
 CREATE TABLE IF NOT EXISTS `location` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '地点ID',
     `name` VARCHAR(200) NOT NULL COMMENT '地点名称',
+    `school_name` VARCHAR(200) DEFAULT NULL COMMENT '所属学校名称',
     `longitude` DECIMAL(10,7) NOT NULL COMMENT '经度',
     `latitude` DECIMAL(10,7) NOT NULL COMMENT '纬度',
     `type` VARCHAR(50) NOT NULL COMMENT '地点类型（如building）',
+    `capacity` INT NOT NULL COMMENT '地点容量',
     `address` VARCHAR(200) DEFAULT NULL COMMENT '详细地址（可选）',
     `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_location_name` (`name`) COMMENT '地点名称唯一索引'
+    UNIQUE KEY `uk_location_name` (`name`) COMMENT '地点名称唯一索引',
+    KEY `idx_location_school_name` (`school_name`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='地点表';
 -- 用户相关表
 -- 用户表
@@ -41,6 +57,8 @@ CREATE TABLE IF NOT EXISTS `user` (
     `phone` VARCHAR(20) NOT NULL COMMENT '手机号',
     `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
     `department_id` BIGINT DEFAULT NULL COMMENT '系别ID',
+    `title` VARCHAR(100) DEFAULT NULL COMMENT '职称或头衔',
+    `bio` TEXT DEFAULT NULL COMMENT '个人简介',
     `interest_tags` JSON DEFAULT NULL COMMENT '兴趣标签(JSON格式)',
     `participation_score` DECIMAL(3,1) DEFAULT 0.0 COMMENT '参与度评分',
     `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '是否删除(0:未删除 1:已删除)',
@@ -329,3 +347,10 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
 -- ============================================================
 -- 2026-09-11：报名表增加签到时间字段
 -- ALTER TABLE `registration` ADD COLUMN `checkin_time` DATETIME DEFAULT NULL COMMENT '签到时间' AFTER `checkin_status`;
+-- 2026-09-13：容量规划基础字段（已有库请按需执行）
+-- ALTER TABLE `location` ADD COLUMN `school_name` VARCHAR(200) DEFAULT NULL COMMENT '所属学校名称' AFTER `name`;
+-- ALTER TABLE `location` ADD COLUMN `capacity` INT NOT NULL DEFAULT 0 COMMENT '地点容量' AFTER `type`;
+-- ALTER TABLE `user` ADD COLUMN `title` VARCHAR(100) DEFAULT NULL COMMENT '职称或头衔' AFTER `department_id`;
+-- ALTER TABLE `user` ADD COLUMN `bio` TEXT DEFAULT NULL COMMENT '个人简介' AFTER `title`;
+-- ALTER TABLE `school_profile` ADD COLUMN `profile_content` TEXT DEFAULT NULL COMMENT '办学定位、优势学科与学生群体画像' AFTER `school_name`;
+-- CREATE TABLE `school_profile` (id BIGINT NOT NULL AUTO_INCREMENT, school_name VARCHAR(200) NOT NULL, profile_content TEXT DEFAULT NULL, min_room_capacity INT NOT NULL DEFAULT 0, max_room_capacity INT NOT NULL DEFAULT 0, created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uk_school_profile_name (school_name));

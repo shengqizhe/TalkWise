@@ -33,12 +33,12 @@
             <input :value="departmentName" type="text" disabled />
           </div>
           <div class="form-item">
+            <label>职称/头衔</label>
+            <input v-model="form.title" type="text" placeholder="请输入职称或头衔" />
+          </div>
+          <div class="form-item">
             <label>个人简介</label>
-            <textarea
-              :value="introPlaceholder"
-              disabled
-              placeholder="个人简介功能暂未开放（后端暂无字段），后续版本支持"
-            ></textarea>
+            <textarea v-model="form.bio" placeholder="介绍研究方向、专业背景等"></textarea>
           </div>
           <button class="btn-solid" :disabled="saving" @click="saveProfile">
             {{ saving ? "保存中..." : "保存修改" }}
@@ -63,7 +63,7 @@ const saving = ref(false);
 const departmentList = ref([]);
 const lectureCount = ref(0);
 
-const form = reactive({ realName: "" });
+const form = reactive({ realName: "", title: "", bio: "" });
 
 const initial = computed(() => {
   const name = userInfo.value?.realName || userInfo.value?.username || "";
@@ -111,6 +111,8 @@ async function saveProfile() {
     const response = await updateUser({
       ...userInfo.value,
       realName: form.realName.trim(),
+      title: form.title.trim(),
+      bio: form.bio.trim(),
     });
     if (response.code === 200) {
       ElMessage.success("保存成功");
@@ -128,6 +130,8 @@ async function saveProfile() {
 
 onMounted(() => {
   form.realName = userInfo.value?.realName || "";
+  form.title = userInfo.value?.title || "";
+  form.bio = userInfo.value?.bio || "";
   loadDepartments();
   loadLectureCount();
 });

@@ -51,6 +51,7 @@
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="locationName" label="地点名称" width="150" />
       <el-table-column prop="address" label="地址" min-width="200" />
+      <el-table-column prop="capacity" label="容量" width="90" />
       <el-table-column label="位置坐标" width="180">
         <template #default="scope">
           <span v-if="scope.row.longitude && scope.row.latitude" class="coordinate-text">
@@ -95,6 +96,9 @@
           <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
             <el-form-item label="地点名称" prop="locationName">
               <el-input v-model="form.locationName" placeholder="请输入地点名称" />
+            </el-form-item>
+            <el-form-item label="容量" prop="capacity">
+              <el-input-number v-model="form.capacity" :min="0" :step="10" />
             </el-form-item>
             <el-form-item label="地址" prop="address">
               <el-input v-model="form.address" placeholder="请选择地址" readonly>
@@ -253,6 +257,8 @@ const form = reactive({
   longitude: null,
   latitude: null,
   description: "",
+  capacity: 0,
+  schoolName: "",
 });
 const formRef = ref(null);
 
@@ -302,6 +308,8 @@ const getLocationList = async () => {
       longitude: parseFloat(item.longitude), // 确保经度是数值类型
       latitude: parseFloat(item.latitude),   // 确保纬度是数值类型
       description: item.type || '',
+      capacity: item.capacity || 0,
+      schoolName: item.schoolName || '',
       createdTime: item.createdTime
     }));
     
@@ -639,7 +647,9 @@ const handleSubmit = () => {
         address: form.address,
         longitude: form.longitude,
         latitude: form.latitude,
-        type: form.description
+        type: form.description,
+        capacity: form.capacity || 0,
+        schoolName: form.schoolName || null
       };
 
       console.log('提交的数据:', locationData); // 调试日志

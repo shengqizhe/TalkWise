@@ -69,6 +69,8 @@ function toolLabel(name) {
     queryStatistics: '查询统计',
     generatePromotion: '生成宣传文案',
     analyzeEvaluations: '分析评价',
+    getAnalysisTaskStatus: '查询分析进度',
+    estimateCapacity: '估算建议容量',
   }
   return map[name] || name
 }
