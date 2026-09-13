@@ -1,14 +1,39 @@
+# 更新日志（Changelog）
+
+**知讲 TalkWise** — 大学讲座智能平台（Spring Boot 3 + Vue 3 + LangChain4j Agent）
+
+> 格式约定：每次提交后在顶部追加一条，按「新特性 / 变更 / 修复」分类说明。
+
+---
+
+## 2026-09-13 · 确认动作四类化、教室推荐、任务调度与容量明细
+
+**新特性**
+- 讲座确认动作从「仅创建」扩展为**创建 / 修改 / 取消 / 发布**四类：新增 `prepareLectureUpdate`、`prepareLectureCancel`、`prepareLecturePublish` 工具，确认接口按 `type` 分派到对应业务方法。
+- 新增 `recommendRoom` 教室推荐工具：按时间区间排除冲突教室，容量贴合优先排序，容量不足的教室也列出并标注。
+- 新增 `report_generation` 报表生成与 `reminder_notification` 提醒推送两个任务执行器。
+- 主动任务支持 `idempotencyKey` 幂等去重与 `priority` 优先级。
+
+**变更**
+- 新增 `lecture.duration_minutes` 字段（默认 120 分钟），讲座自动结束判定与教室冲突检测改用它。
+- 任务派发改为 DB 轮询调度器：按 `priority DESC, created_time ASC` 经 CAS 抢占执行，失败按 `retryCount < maxRetries` 退避重排，超限置 FAILED。
+- 新增卡死任务回收：`RUNNING` 超过阈值视为中断，有额度重排、无额度判失败。
+- 容量估算结果新增完整明细：历史样本数、三个口径各自的样本数/均值/采用与舍弃原因、教室容量范围、是否使用画像与教师资料、建议区间。
+- 修正 `clampRound`：不再把结果强制抬高到最大教室容量的三分之一（该规则只用于统计口径筛选）。
+- 教师资料查询改为列表取首条，避免重名教师导致 `TooManyResultsException` 被吞成「LLM 不可用」。
+
+**修复**
+- 取消确认草稿的 `_reason` 附加字段在回读时被剔除，避免依赖 ObjectMapper 的未知字段配置。
+- 讲座修改/取消/发布走带归属校验与字段白名单的方法，禁止通过请求篡改 `organizerId`/`status`/`publishStatus`/`registeredCount`。
+- `prepareLectureCreation` 等写工具补标 `ToolType.WRITE`，使其进入审计日志。
+
+---
+
 ## 2026-09-13 · Agent 扩展：确认式创建与通用主动任务
 
 - 删除旧 `/api/ai/*` Controller、Service、DTO 及前端 API，统一使用 `/api/agent/chat`。
 - 新增讲座草稿确认动作：`prepareLectureCreation`、`/api/agent/actions/{id}/confirm`、`/api/agent/actions/{id}/reject`。
 - 新增通用主动任务接口和执行器注册表，保留评价分析异步任务。
-
-
-**知讲 TalkWise** — 大学讲座智能平台（Spring Boot 3 + Vue 3 + LangChain4j Agent）
-
-> 格式约定：每次提交后在顶部追加一条，按「新特性 / 变更 / 修复」分类说明；
-> 每条附提交短哈希，便于与 git 历史对照。
 
 ---
 
@@ -107,6 +132,7 @@
 
 **新特性**
 - **工具标签体系**：`@AgentTool` 新增 `domain`（域：lecture / registration / statistics / content / analysis / general）与 `roles`（角色限制）属性，7 个工具全部标注
+  - 注（后续补充）：此后新增 `estimateCapacity` / `prepareLectureCreation` / `getAnalysisTaskStatus`，当前共 10 个工具，均已标注 domain 与 roles
 - **调用前双层过滤（ToolRouter）**：
   1. 身份过滤——按当前用户角色裁剪（学生/游客上下文里不出现管理类工具）
   2. 意图过滤——按用户消息命中工具域，只下发相关域工具；lecture 基础域与 general 常驻；**未命中任何域则不裁剪**（安全兜底）

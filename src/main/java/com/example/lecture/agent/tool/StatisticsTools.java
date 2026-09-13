@@ -60,7 +60,15 @@ public class StatisticsTools {
     public String queryStatistics(
             @AgentParam(name = "metric", description = "指标：overview / categories / departments / top_lectures") String metric
     ) {
-        Long userId = AgentContext.getUserId();
+        return queryStatistics(metric, AgentContext.getUserId());
+    }
+
+    /**
+     * 按指定用户计算指标（无 AgentContext 的调用方使用，如后台主动任务线程）。
+     *
+     * @param userId 统计范围主体；管理员=全平台，教师=自己的讲座，其他角色/未登录无权限
+     */
+    public String queryStatistics(String metric, Long userId) {
         if (userId == null) {
             return "请先登录后再查询统计数据。";
         }

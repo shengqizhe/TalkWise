@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS `lecture` (
     `speaker` VARCHAR(100) NOT NULL COMMENT '主讲人',
     `location_id` BIGINT DEFAULT NULL COMMENT '关联的地点ID',
     `lecture_time` DATETIME NOT NULL COMMENT '讲座时间',
+    `duration_minutes` INT NOT NULL DEFAULT 120 COMMENT '讲座时长(分钟)',
     `capacity` INT NOT NULL COMMENT '容量',
     `registered_count` INT DEFAULT 0 COMMENT '报名人数',
     `organizer_id` BIGINT NOT NULL COMMENT '组织者ID',
@@ -163,6 +164,7 @@ CREATE TABLE IF NOT EXISTS `lecture` (
     `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
+    KEY `idx_lecture_location_time` (`location_id`, `lecture_time`),
     CONSTRAINT `fk_lecture_category_id` FOREIGN KEY (`category_id`) REFERENCES `lecture_category` (`id`),
     CONSTRAINT `fk_lecture_organizer_id` FOREIGN KEY (`organizer_id`) REFERENCES `user` (`id`),
     CONSTRAINT `fk_lecture_host_department_id` FOREIGN KEY (`host_department_id`) REFERENCES `department` (`id`),
@@ -329,6 +331,7 @@ CREATE TABLE IF NOT EXISTS `pending_action` (
     `payload` JSON NOT NULL COMMENT '动作草稿快照',
     `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/CONFIRMED/REJECTED)',
     `result_id` BIGINT DEFAULT NULL COMMENT '确认后生成的讲座ID',
+    `target_id` BIGINT DEFAULT NULL COMMENT '目标讲座ID(非创建动作)',
     `created_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -343,9 +346,13 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '任务ID',
     `user_id` BIGINT NOT NULL COMMENT '发起用户ID',
     `type` VARCHAR(50) NOT NULL COMMENT '任务类型(如 evaluation_analysis)',
+    `idempotency_key` VARCHAR(100) DEFAULT NULL COMMENT '幂等键(同一用户重复提交去重)',
     `name` VARCHAR(200) DEFAULT NULL COMMENT '任务名称',
     `params` VARCHAR(500) DEFAULT NULL COMMENT '任务参数(JSON)',
-    `priority` INT NOT NULL DEFAULT 0 COMMENT '任务优先级',
+    `priority` INT NOT NULL DEFAULT 0 COMMENT '任务优先级(越大越优先)',
+    `retry_count` INT NOT NULL DEFAULT 0 COMMENT '已重试次数',
+    `max_retries` INT NOT NULL DEFAULT 2 COMMENT '最大重试次数',
+    `next_retry_time` DATETIME DEFAULT NULL COMMENT '下次可执行时间(退避重排)',
     `status` VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '状态(PENDING/RUNNING/SUCCESS/FAILED/CANCELLED)',
     `progress` INT NOT NULL DEFAULT 0 COMMENT '进度百分比(0-100)',
     `progress_text` VARCHAR(255) DEFAULT NULL COMMENT '进度说明',
@@ -355,7 +362,9 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
     `started_time` DATETIME DEFAULT NULL COMMENT '开始执行时间',
     `finished_time` DATETIME DEFAULT NULL COMMENT '完成时间',
     PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_agent_task_idempotency` (`idempotency_key`),
     KEY `idx_agent_task_user` (`user_id`, `created_time`),
+    KEY `idx_agent_task_schedule` (`status`, `priority`, `next_retry_time`, `created_time`),
     CONSTRAINT `fk_agent_task_user_id` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Agent 异步任务表';
 
@@ -375,3 +384,13 @@ CREATE TABLE IF NOT EXISTS `agent_task` (
 -- ALTER TABLE `user` ADD COLUMN `bio` TEXT DEFAULT NULL COMMENT '个人简介' AFTER `title`;
 -- ALTER TABLE `school_profile` ADD COLUMN `profile_content` TEXT DEFAULT NULL COMMENT '办学定位、优势学科与学生群体画像' AFTER `school_name`;
 -- CREATE TABLE `school_profile` (id BIGINT NOT NULL AUTO_INCREMENT, school_name VARCHAR(200) NOT NULL, profile_content TEXT DEFAULT NULL, min_room_capacity INT NOT NULL DEFAULT 0, max_room_capacity INT NOT NULL DEFAULT 0, created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uk_school_profile_name (school_name));
+-- 2026-09-13：讲座时长与教室冲突查询（已有库请按需执行）
+-- ALTER TABLE `lecture` ADD COLUMN `duration_minutes` INT NOT NULL DEFAULT 120 COMMENT '讲座时长(分钟)' AFTER `lecture_time`;
+-- ALTER TABLE `lecture` ADD INDEX `idx_lecture_location_time` (`location_id`, `lecture_time`);
+-- 2026-09-13：通用主动任务幂等与重试（已有库请按需执行）
+-- ALTER TABLE `agent_task` ADD COLUMN `idempotency_key` VARCHAR(100) DEFAULT NULL COMMENT '幂等键' AFTER `type`;
+-- ALTER TABLE `agent_task` ADD COLUMN `retry_count` INT NOT NULL DEFAULT 0 COMMENT '已重试次数' AFTER `priority`;
+-- ALTER TABLE `agent_task` ADD COLUMN `max_retries` INT NOT NULL DEFAULT 2 COMMENT '最大重试次数' AFTER `retry_count`;
+-- ALTER TABLE `agent_task` ADD COLUMN `next_retry_time` DATETIME DEFAULT NULL COMMENT '下次重试时间' AFTER `max_retries`;
+-- ALTER TABLE `agent_task` ADD UNIQUE KEY `uk_agent_task_idempotency` (`idempotency_key`);
+-- ALTER TABLE `pending_action` ADD COLUMN `target_id` BIGINT DEFAULT NULL COMMENT '目标讲座ID(非创建动作)' AFTER `result_id`;

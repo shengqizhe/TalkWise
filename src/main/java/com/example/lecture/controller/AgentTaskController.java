@@ -48,6 +48,12 @@ public class AgentTaskController {
         return Result.success();
     }
 
+    @Operation(summary = "重试失败任务", description = "仅 FAILED 状态的任务可重试，重试后清零重试计数并重新排队")
+    @PostMapping("/{taskId}/retry")
+    public Result<AgentTask> retry(@PathVariable Long taskId) {
+        return Result.success(taskService.retry(currentUserId(), taskId));
+    }
+
     private Long currentUserId() {
         StpUtil.checkLogin();
         return StpUtil.getLoginIdAsLong();

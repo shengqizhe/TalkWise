@@ -25,23 +25,70 @@ const toolLabels = {
   analyzeEvaluations: "分析评价",
   getAnalysisTaskStatus: "查询分析进度",
   estimateCapacity: "估算建议容量",
+  recommendRoom: "推荐教室",
+  prepareLectureCreation: "创建讲座草稿",
+  prepareLectureUpdate: "修改讲座草稿",
+  prepareLectureCancel: "取消讲座草稿",
+  prepareLecturePublish: "发布讲座草稿",
 };
 
-async function confirmAction(actionId) {
-  try {
-    const res = await confirmAgentAction(actionId);
-    history.value.push({ role: "ai", content: res.data?.status === "CONFIRMED" ? `讲座已创建，编号：${res.data.resultId}` : "讲座创建状态已更新", tools: [], timestamp: new Date() });
-  } catch (error) {
-    ElMessage.error(error.response?.data?.message || "确认创建失败");
+// 确认卡标题：不同动作类型展示不同文案
+const actionTitles = {
+  CREATE_LECTURE: "新建讲座待确认",
+  UPDATE_LECTURE: "修改讲座待确认",
+  CANCEL_LECTURE: "取消讲座待确认",
+  PUBLISH_LECTURE: "发布状态变更待确认",
+};
+
+function actionTitle(type) {
+  return actionTitles[type] || "待确认操作";
+}
+
+// 确认成功后的回执文案，按动作类型区分
+function confirmedMessage(data) {
+  if (!data) return "操作已确认。";
+  const id = data.resultId ? `，编号：${data.resultId}` : "";
+  switch (data.type) {
+    case "CREATE_LECTURE":
+      return `讲座已创建${id}。如需面向学生公开，请再让我发布该讲座。`;
+    case "UPDATE_LECTURE":
+      return `讲座修改已生效${id}。`;
+    case "CANCEL_LECTURE":
+      return `讲座已取消${id}。`;
+    case "PUBLISH_LECTURE":
+      return data.lecture?.publishStatus === 1 ? "讲座已发布。" : "讲座已下架。";
+    default:
+      return `操作已确认${id}。`;
   }
 }
 
-async function rejectAction(actionId) {
+async function confirmAction(action) {
   try {
-    await rejectAgentAction(actionId);
-    history.value.push({ role: "ai", content: "已取消本次讲座创建。", tools: [], timestamp: new Date() });
+    const res = await confirmAgentAction(action.actionId);
+    history.value.push({
+      role: "ai",
+      content: confirmedMessage(res.data),
+      tools: [],
+      timestamp: new Date(),
+    });
+    action.status = res.data?.status || "CONFIRMED";
   } catch (error) {
-    ElMessage.error(error.response?.data?.message || "取消创建失败");
+    ElMessage.error(error.response?.data?.message || "确认操作失败");
+  }
+}
+
+async function rejectAction(action) {
+  try {
+    await rejectAgentAction(action.actionId);
+    history.value.push({
+      role: "ai",
+      content: "已放弃本次操作。",
+      tools: [],
+      timestamp: new Date(),
+    });
+    action.status = "REJECTED";
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || "放弃操作失败");
   }
 }
 
@@ -100,9 +147,18 @@ async function handleAnalyze() {
                 </div>
                 <div class="message-content">{{ item.content }}</div>
                 <div v-if="item.action?.status === 'PENDING'" class="action-card">
-                  <div>讲座草稿待确认（动作 #{{ item.action.actionId }}）</div>
-                  <el-button size="small" type="primary" @click="confirmAction(item.action.actionId)">确认创建</el-button>
-                  <el-button size="small" @click="rejectAction(item.action.actionId)">取消</el-button>
+                  <div class="action-card-title">{{ actionTitle(item.action.type) }}</div>
+                  <div class="action-card-summary">{{ item.action.summary }}</div>
+                  <div class="action-card-fields">
+                    <span v-if="item.action.lecture?.title">标题：{{ item.action.lecture.title }}</span>
+                    <span v-if="item.action.lecture?.speaker">主讲人：{{ item.action.lecture.speaker }}</span>
+                    <span v-if="item.action.lecture?.lectureTime">时间：{{ item.action.lecture.lectureTime }}</span>
+                    <span v-if="item.action.lecture?.durationMinutes">时长：{{ item.action.lecture.durationMinutes }} 分钟</span>
+                    <span v-if="item.action.lecture?.capacity">容量：{{ item.action.lecture.capacity }} 人</span>
+                    <span v-if="item.action.reason">原因：{{ item.action.reason }}</span>
+                  </div>
+                  <el-button size="small" type="primary" @click="confirmAction(item.action)">确认执行</el-button>
+                  <el-button size="small" @click="rejectAction(item.action)">放弃</el-button>
                 </div>
                 <div v-if="item.tools?.length" class="tool-trail">
                   <span v-for="(tool, toolIndex) in item.tools" :key="toolIndex" class="tool-chip">
@@ -158,7 +214,10 @@ async function handleAnalyze() {
 .chat-bubble.ai .message-content { background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px; }
 .tool-trail { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .action-card { margin-top: 10px; padding: 12px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 8px; }
-.action-card .el-button { margin-top: 8px; }
+.action-card-title { font-weight: 600; margin-bottom: 6px; }
+.action-card-summary { font-size: 13px; color: #666; margin-bottom: 6px; }
+.action-card-fields { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: #333; margin-bottom: 8px; }
+.action-card .el-button { margin-top: 4px; }
 
 .tool-chip { font-size: 12px; color: #666; background: #f2f2f2; border-radius: 20px; padding: 3px 10px; }
 .loading-text { color: #999; }

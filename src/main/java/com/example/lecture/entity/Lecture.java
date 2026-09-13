@@ -72,7 +72,12 @@ public class Lecture {
      * 讲座时间
      */
     private LocalDateTime lectureTime;
-    
+
+    /**
+     * 讲座时长（分钟），用于教室时间冲突判定；为空时按 120 分钟处理
+     */
+    private Integer durationMinutes;
+
     /**
      * 容量
      */
@@ -127,4 +132,17 @@ public class Lecture {
      */
     @TableField(exist = false)
     private Map<String, Object> extendData = new HashMap<>();
+
+    /** 讲座默认时长（分钟），用于时长缺失时的兜底 */
+    public static final int DEFAULT_DURATION_MINUTES = 120;
+
+    /** 有效时长：未维护或非正数时回退默认值 */
+    public int effectiveDurationMinutes() {
+        return durationMinutes == null || durationMinutes <= 0 ? DEFAULT_DURATION_MINUTES : durationMinutes;
+    }
+
+    /** 讲座结束时间：开始时间 + 有效时长；开始时间缺失时返回 null */
+    public LocalDateTime endTime() {
+        return lectureTime == null ? null : lectureTime.plusMinutes(effectiveDurationMinutes());
+    }
 }

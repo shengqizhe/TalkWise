@@ -122,6 +122,16 @@
             :disabled-time="disablePastTime"
           />
         </el-form-item>
+        <el-form-item label="讲座时长" prop="durationMinutes">
+          <el-input-number
+            v-model="lectureForm.durationMinutes"
+            :min="10"
+            :max="600"
+            :step="10"
+            placeholder="分钟，默认 120"
+          />
+          <span class="duration-hint">分钟（用于教室时间冲突判定）</span>
+        </el-form-item>
         <el-form-item label="最大人数" prop="capacity">
           <el-input-number 
             v-model="lectureForm.capacity" 
@@ -318,6 +328,7 @@ const lectureForm = reactive({
   speaker: '',
   locationId: undefined,
   lectureTime: '',
+  durationMinutes: 120,
   capacity: 100,
   categoryId: undefined,
   status: undefined,
@@ -808,6 +819,7 @@ function resetForm() {
   lectureForm.speaker = '';
   lectureForm.locationId = undefined;
   lectureForm.lectureTime = '';
+  lectureForm.durationMinutes = 120;
   lectureForm.capacity = 100;
   lectureForm.categoryId = undefined;
   lectureForm.status = undefined;
@@ -1058,6 +1070,12 @@ onUnmounted(() => {
 
 <style scoped>
 /* ============ 黑白极简风格（与学生端统一） ============ */
+
+.duration-hint {
+  margin-left: 8px;
+  font-size: 12px;
+  color: #999;
+}
 
 .teacher-lectures {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;

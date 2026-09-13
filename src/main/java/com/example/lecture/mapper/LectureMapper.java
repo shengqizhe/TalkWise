@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Select;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -55,4 +56,21 @@ public interface LectureMapper extends BaseMapper<Lecture> {
      */
     @Select("SELECT * FROM lecture WHERE speaker LIKE CONCAT('%', #{speaker}, '%') AND deleted = 0 AND publish_status = 1")
     List<Lecture> selectBySpeaker(@Param("speaker") String speaker);
+
+    /**
+     * 查询指定教室在 [newStart, newEnd) 区间内已占用的讲座（教室推荐的时间冲突判定）。
+     *
+     * <p>重叠判定：lecture_time &lt; newEnd AND lecture_time + duration_minutes &gt; newStart；
+     * 仅统计未删除且未取消（status &lt;&gt; 4）的记录；excludeLectureId 非空时排除自身（改期场景）。</p>
+     */
+    @Select("<script>"
+            + "SELECT * FROM lecture WHERE location_id = #{locationId} AND deleted = 0 AND status &lt;&gt; 4 "
+            + "AND lecture_time &lt; #{newEnd} "
+            + "AND DATE_ADD(lecture_time, INTERVAL duration_minutes MINUTE) &gt; #{newStart} "
+            + "<if test='excludeLectureId != null'>AND id &lt;&gt; #{excludeLectureId} </if>"
+            + "</script>")
+    List<Lecture> selectConflictingLectures(@Param("locationId") Long locationId,
+                                            @Param("newStart") LocalDateTime newStart,
+                                            @Param("newEnd") LocalDateTime newEnd,
+                                            @Param("excludeLectureId") Long excludeLectureId);
 } 

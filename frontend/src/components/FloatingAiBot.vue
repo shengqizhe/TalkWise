@@ -23,6 +23,23 @@
                 🔧 {{ toolLabel(t.name) }}
               </span>
             </div>
+            <!-- 写操作确认卡：创建/修改/取消/发布都需用户明确确认 -->
+            <div v-if="msg.action && msg.action.status === 'PENDING'" class="action-card">
+              <div class="action-card-title">{{ actionTitle(msg.action.type) }}</div>
+              <div class="action-card-summary">{{ msg.action.summary }}</div>
+              <div class="action-card-fields">
+                <span v-if="msg.action.lecture?.title">标题：{{ msg.action.lecture.title }}</span>
+                <span v-if="msg.action.lecture?.speaker">主讲人：{{ msg.action.lecture.speaker }}</span>
+                <span v-if="msg.action.lecture?.lectureTime">时间：{{ msg.action.lecture.lectureTime }}</span>
+                <span v-if="msg.action.lecture?.durationMinutes">时长：{{ msg.action.lecture.durationMinutes }} 分钟</span>
+                <span v-if="msg.action.lecture?.capacity">容量：{{ msg.action.lecture.capacity }} 人</span>
+                <span v-if="msg.action.reason">原因：{{ msg.action.reason }}</span>
+              </div>
+              <div class="action-card-actions">
+                <button class="confirm-btn" @click="confirmAction(msg.action)">确认执行</button>
+                <button class="cancel-btn" @click="rejectAction(msg.action)">放弃</button>
+              </div>
+            </div>
           </div>
           <div v-if="loading" class="msg ai">
             <div class="msg-content loading-text">思考中…</div>
@@ -44,7 +61,8 @@
 
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { agentChat } from '@/api/agent'
+import { ElMessage } from 'element-plus'
+import { agentChat, confirmAgentAction, rejectAgentAction } from '@/api/agent'
 
 const isVisible = ref(false)
 const isMinimized = ref(false)
@@ -71,8 +89,62 @@ function toolLabel(name) {
     analyzeEvaluations: '分析评价',
     getAnalysisTaskStatus: '查询分析进度',
     estimateCapacity: '估算建议容量',
+    recommendRoom: '推荐教室',
+    prepareLectureCreation: '创建讲座草稿',
+    prepareLectureUpdate: '修改讲座草稿',
+    prepareLectureCancel: '取消讲座草稿',
+    prepareLecturePublish: '发布讲座草稿',
   }
   return map[name] || name
+}
+
+// 确认卡标题与回执文案按动作类型区分
+const actionTitles = {
+  CREATE_LECTURE: '新建讲座待确认',
+  UPDATE_LECTURE: '修改讲座待确认',
+  CANCEL_LECTURE: '取消讲座待确认',
+  PUBLISH_LECTURE: '发布状态变更待确认',
+}
+
+function actionTitle(type) {
+  return actionTitles[type] || '待确认操作'
+}
+
+function confirmedMessage(data) {
+  if (!data) return '操作已确认。'
+  const id = data.resultId ? `，编号：${data.resultId}` : ''
+  switch (data.type) {
+    case 'CREATE_LECTURE':
+      return `讲座已创建${id}。如需面向学生公开，请再让我发布该讲座。`
+    case 'UPDATE_LECTURE':
+      return `讲座修改已生效${id}。`
+    case 'CANCEL_LECTURE':
+      return `讲座已取消${id}。`
+    case 'PUBLISH_LECTURE':
+      return data.lecture?.publishStatus === 1 ? '讲座已发布。' : '讲座已下架。'
+    default:
+      return `操作已确认${id}。`
+  }
+}
+
+async function confirmAction(action) {
+  try {
+    const res = await confirmAgentAction(action.actionId)
+    chatHistory.value.push({ role: 'ai', content: confirmedMessage(res.data) })
+    action.status = res.data?.status || 'CONFIRMED'
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '确认操作失败')
+  }
+}
+
+async function rejectAction(action) {
+  try {
+    await rejectAgentAction(action.actionId)
+    chatHistory.value.push({ role: 'ai', content: '已放弃本次操作。' })
+    action.status = 'REJECTED'
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '放弃操作失败')
+  }
 }
 
 const openBot = () => {
@@ -119,6 +191,7 @@ const sendMessage = async () => {
       role: 'ai',
       content: res.data?.reply || '（未返回内容）',
       tools: res.data?.tools || [],
+      action: res.data?.action || null,
     })
   } catch (e) {
     console.error('Agent 请求失败:', e)
@@ -176,6 +249,15 @@ defineExpose({ openBot })
 /* 工具调用轨迹 */
 .tool-trail { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .tool-chip { font-size: 12px; color: #666; background: #f2f2f2; border-radius: 20px; padding: 3px 10px; }
+
+/* 写操作确认卡 */
+.action-card { margin-top: 8px; padding: 10px 12px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 8px; text-align: left; }
+.action-card-title { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.action-card-summary { font-size: 12px; color: #666; margin-bottom: 6px; }
+.action-card-fields { display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #333; margin-bottom: 8px; }
+.action-card-actions { display: flex; gap: 8px; }
+.confirm-btn { background: #000; color: #fff; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.cancel-btn { background: #fff; color: #666; border: 1px solid #ddd; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; }
 
 .loading-text { color: #999; }
 

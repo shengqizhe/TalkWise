@@ -21,6 +21,15 @@ public class AgentTask {
     public static final String STATUS_CANCELLED = "CANCELLED";
 
     public static final String TYPE_EVALUATION_ANALYSIS = "evaluation_analysis";
+    public static final String TYPE_REPORT_GENERATION = "report_generation";
+    public static final String TYPE_REMINDER_NOTIFICATION = "reminder_notification";
+
+    /** 默认最大重试次数（与 agent_task.max_retries 列默认值一致） */
+    public static final int DEFAULT_MAX_RETRIES = 2;
+    /** 默认优先级（与 agent_task.priority 列默认值一致） */
+    public static final int DEFAULT_PRIORITY = 0;
+    /** 请求可声明的最大重试次数上限（防单任务长期占用调度资源） */
+    public static final int MAX_RETRIES_LIMIT = 10;
 
     /**
      * 任务ID
@@ -39,6 +48,11 @@ public class AgentTask {
     private String type;
 
     /**
+     * 幂等键（同一用户重复提交去重；唯一索引 uk_agent_task_idempotency）
+     */
+    private String idempotencyKey;
+
+    /**
      * 任务名称
      */
     private String name;
@@ -49,9 +63,24 @@ public class AgentTask {
     private String params;
 
     /**
-     * 任务优先级
+     * 任务优先级（越大越优先）
      */
     private Integer priority;
+
+    /**
+     * 已重试次数
+     */
+    private Integer retryCount;
+
+    /**
+     * 最大重试次数
+     */
+    private Integer maxRetries;
+
+    /**
+     * 下次可执行时间（失败退避重排，为空表示可立即执行）
+     */
+    private LocalDateTime nextRetryTime;
 
     /**
      * 状态：PENDING / RUNNING / SUCCESS / FAILED / CANCELLED

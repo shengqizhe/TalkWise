@@ -29,7 +29,7 @@
 | ① 工具注册表 | 工具卡片：命名空间、能做什么、何时用/何时不用、Schema、标签、权限风险、状态 | `@AgentTool`：`name` / `description`（四段式）/ `domain` 域标签 / `roles` 角色 / `type` 读写分级；注册表启动扫描 | ✅ |
 | ② 确定性过滤 | **先鉴权再做相关性召回**：静态 Allowlist + 动态（角色/租户/任务状态） | `ToolRouter` 身份过滤：按当前用户角色裁剪（学生/游客看不到管理类工具） | ✅ |
 | ③ 粗分类缩域 | 规则或轻量分类模型；高召回偏置（多意图保留多域）；不确定则跳过 | 关键词命中工具域（statistics/analysis/content/registration/lecture）；**命中多域全保留**；未命中不裁剪 | ✅（规则版） |
-| ④ 候选域内检索 | 关键词/BM25/Embedding/混合检索 Top-K | 未实现（当前 7 个工具，粗分类后候选已很小） | ⏳ 工具 15+ 时升级 |
+| ④ 候选域内检索 | 关键词/BM25/Embedding/混合检索 Top-K | 未实现（当前 10 个工具，粗分类后候选已很小） | ⏳ 工具 15+ 时升级 |
 | ⑤ 动态绑定精选 | 只把候选工具完整 Schema 绑定给模型，由模型决定是否调用/选哪个/填参数 | 每轮对话只下发路由后的工具 Schema；模型在候选集内自主决策 | ✅ |
 | 常驻策略 | 高频低风险工具常驻，长尾按需加载 | `lecture` 基础域 + `general` 域常驻（找讲座是全流程入口，报名/推荐都依赖它拿 ID） | ✅ |
 | 执行层安全 | 隐藏 ≠ 鉴权：执行时按参数与资源归属再校验 | 工具内二次校验（角色 + 资源归属，如教师仅限本人讲座）+ **候选集外调用运行时拒绝** | ✅ |
@@ -55,14 +55,15 @@
 - 路由日志：`[Agent路由] 命中域 [analysis]，工具 7 → 2 个`
 - 拒绝日志：`[Agent审计] 拒绝候选集外工具调用: xxx`
 - 工具轨迹随响应返回前端展示（`🔧 查询讲座` 等标签）
-- 创建讲座先由 `prepareLectureCreation` 生成草稿，确认接口只接受动作发起人并使用条件状态更新防重复执行。
-- 主动任务按 `type` 经 `AgentTaskExecutorRegistry` 分派；当前已注册评价分析执行器。
+- 写操作统一走「草稿 → 明确确认 → 执行」：`prepareLectureCreation` / `prepareLectureUpdate` / `prepareLectureCancel` / `prepareLecturePublish` 只生成 `pending_action` 草稿，确认接口按动作类型分派并校验归属，条件状态更新防止重复执行。
+- 教室推荐 `recommendRoom` 为只读工具：先按时间区间排除冲突教室，再按容量贴合度排序，容量不足的教室也会列出并标注。
+- 主动任务按 `type` 经 `AgentTaskExecutorRegistry` 分派，已注册 `evaluation_analysis`、`report_generation`、`reminder_notification` 三类执行器。
 
 ## 5. 演进路径（工具规模决定复杂度）
 
 | 工具规模 | 方案 |
 |---|---|
-| < 15（当前 7 个） | 关键词规则粗分类 + 身份过滤（本实现） |
+| < 15（当前 14 个） | 关键词规则粗分类 + 身份过滤（本实现） |
 | 15 ~ 50 | 引入 embedding 检索召回 Top-K（工具卡片向量化，名称/标签/场景/排除条件均入索引），可混合 BM25 |
 | > 50 | 检索 + reranker；高召回偏置；按 Skill/工作流进一步缩小命名空间；高风险动作进入确定性规则或人工审批 |
 
@@ -96,3 +97,8 @@
 - 路由过滤：`agent/ToolRouter.java`
 - 候选集校验与循环：`agent/AgentEngine.java`（dispatch）
 - 角色判定：`agent/AgentRoleHelper.java`
+- 写操作草稿与确认：`agent/tool/LectureCreationTools.java` + `service/impl/PendingActionServiceImpl.java`
+- 教室推荐：`agent/service/RoomRecommendationService.java`
+- 主动任务调度：`agent/task/AgentTaskScheduler.java`、`agent/task/AgentTaskExecutorRegistry.java`
+
+> 当前 14 个工具已接近关键词路由的适用上限（15 个），再新增工具时应同步评估是否切换到 embedding 召回 Top-K。

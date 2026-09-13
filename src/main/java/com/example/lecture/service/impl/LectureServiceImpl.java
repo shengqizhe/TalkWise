@@ -127,6 +127,87 @@ public class LectureServiceImpl extends ServiceImpl<LectureMapper, Lecture> impl
         // 更新讲座
         updateById(lecture);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateByOwner(Long lectureId, Lecture patch, Long actorId, boolean admin) {
+        Lecture existing = requireOwnedLecture(lectureId, actorId, admin);
+        if (existing.getStatus() == 3 || existing.getStatus() == 4) {
+            throw new ApiException("讲座已结束或已取消，无法修改");
+        }
+        if (patch == null) {
+            throw new ApiException("没有需要修改的内容");
+        }
+        if (patch.getLectureTime() != null && patch.getLectureTime().isBefore(LocalDateTime.now())) {
+            throw new ApiException("讲座时间必须晚于当前时间");
+        }
+        if (patch.getCapacity() != null && patch.getCapacity() <= 0) {
+            throw new ApiException("讲座容量必须为正数");
+        }
+        if (patch.getDurationMinutes() != null && patch.getDurationMinutes() <= 0) {
+            throw new ApiException("讲座时长必须为正数");
+        }
+        if (patch.getCategoryId() != null && lectureCategoryService.getById(patch.getCategoryId()) == null) {
+            throw new ApiException("讲座类别不存在");
+        }
+        Long targetLocationId = patch.getLocationId() != null ? patch.getLocationId() : existing.getLocationId();
+        int targetCapacity = patch.getCapacity() != null ? patch.getCapacity() : existing.getCapacity();
+        if (targetLocationId != null) {
+            Location location = locationService.getById(targetLocationId);
+            if (location == null) {
+                throw new ApiException("讲座地点不存在");
+            }
+            if (patch.getLocationId() != null && location.getCapacity() != null
+                    && location.getCapacity() > 0 && targetCapacity > location.getCapacity()) {
+                throw new ApiException("讲座容量不能超过地点容量");
+            }
+        }
+        // 字段白名单：只更新业务字段，organizerId/status/publishStatus/registeredCount/deleted 不受请求影响
+        LambdaUpdateWrapper<Lecture> update = new LambdaUpdateWrapper<Lecture>()
+                .eq(Lecture::getId, lectureId)
+                .set(patch.getTitle() != null, Lecture::getTitle, patch.getTitle())
+                .set(patch.getSummary() != null, Lecture::getSummary, patch.getSummary())
+                .set(patch.getContent() != null, Lecture::getContent, patch.getContent())
+                .set(patch.getSpeaker() != null, Lecture::getSpeaker, patch.getSpeaker())
+                .set(patch.getCategoryId() != null, Lecture::getCategoryId, patch.getCategoryId())
+                .set(patch.getLocationId() != null, Lecture::getLocationId, patch.getLocationId())
+                .set(patch.getLectureTime() != null, Lecture::getLectureTime, patch.getLectureTime())
+                .set(patch.getDurationMinutes() != null, Lecture::getDurationMinutes, patch.getDurationMinutes())
+                .set(patch.getCapacity() != null, Lecture::getCapacity, patch.getCapacity());
+        update(update);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelByOwner(Long lectureId, String reason, Long actorId, boolean admin) {
+        requireOwnedLecture(lectureId, actorId, admin);
+        cancel(lectureId, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updatePublishStatusByOwner(Long lectureId, Integer publishStatus, Long actorId, boolean admin) {
+        requireOwnedLecture(lectureId, actorId, admin);
+        if (publishStatus == null || (publishStatus != 0 && publishStatus != 1)) {
+            throw new ApiException("无效的发布状态");
+        }
+        updatePublishStatus(lectureId, publishStatus);
+    }
+
+    /** 校验讲座存在且属于当前操作者（管理员可跨归属），返回现有讲座 */
+    private Lecture requireOwnedLecture(Long lectureId, Long actorId, boolean admin) {
+        if (lectureId == null || actorId == null) {
+            throw new ApiException("参数不能为空");
+        }
+        Lecture existing = getById(lectureId);
+        if (existing == null) {
+            throw new ApiException(ResultCode.LECTURE_NOT_EXIST);
+        }
+        if (!admin && !actorId.equals(existing.getOrganizerId())) {
+            throw new ApiException("只能操作自己的讲座");
+        }
+        return existing;
+    }
     
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -449,9 +530,6 @@ public class LectureServiceImpl extends ServiceImpl<LectureMapper, Lecture> impl
             }
 
             // 3. 更新已超过结束时间的讲座状态为"已结束"
-            // 讲座默认时长为2小时
-            final int DEFAULT_LECTURE_DURATION_MINUTES = 120;
-
             // 查询所有讲座（包括未开始和进行中的讲座）
             QueryWrapper<Lecture> endingWrapper = new QueryWrapper<>();
             endingWrapper.in("status", 1, 2); // 未开始状态(1)或进行中状态(2)
@@ -459,10 +537,10 @@ public class LectureServiceImpl extends ServiceImpl<LectureMapper, Lecture> impl
             List<Lecture> activeLectures = baseMapper.selectList(endingWrapper);
             List<Lecture> endingLectures = activeLectures.stream()
                     .filter(lecture -> {
-                        // 计算讲座结束时间（开始时间 + 默认时长）
-                        LocalDateTime endTime = lecture.getLectureTime().plusMinutes(DEFAULT_LECTURE_DURATION_MINUTES);
-                        // 如果当前时间已经超过结束时间，则需要更新状态
-                        return now.isAfter(endTime);
+                        // 计算讲座结束时间（开始时间 + 讲座自身时长，缺失时回退默认 120 分钟）
+                        LocalDateTime endTime = lecture.endTime();
+                        // 开始时间缺失时不判定结束
+                        return endTime != null && now.isAfter(endTime);
                     })
                     .collect(Collectors.toList());
             for (Lecture lecture : endingLectures) {

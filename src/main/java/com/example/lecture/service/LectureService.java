@@ -32,6 +32,22 @@ public interface LectureService extends IService<Lecture> {
      * 更新讲座
      */
     void update(Lecture lecture);
+
+    /**
+     * 带归属校验与字段白名单的讲座更新（供确认流使用）：
+     * 仅允许更新业务字段，organizerId/status/publishStatus/registeredCount 等服务端字段不受请求影响。
+     */
+    void updateByOwner(Long lectureId, Lecture patch, Long actorId, boolean admin);
+
+    /**
+     * 带归属校验的讲座取消（供确认流使用）
+     */
+    void cancelByOwner(Long lectureId, String reason, Long actorId, boolean admin);
+
+    /**
+     * 带归属校验的发布状态变更（供确认流使用）
+     */
+    void updatePublishStatusByOwner(Long lectureId, Integer publishStatus, Long actorId, boolean admin);
     
     /**
      * 取消讲座
