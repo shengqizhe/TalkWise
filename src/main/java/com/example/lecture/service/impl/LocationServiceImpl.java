@@ -9,6 +9,7 @@ import com.example.lecture.entity.Lecture;
 import com.example.lecture.mapper.LocationMapper;
 import com.example.lecture.mapper.LectureMapper;
 import com.example.lecture.service.LocationService;
+import com.example.lecture.service.SchoolProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,9 @@ public class LocationServiceImpl extends ServiceImpl<LocationMapper, Location> i
     
     @Autowired
     private LectureMapper lectureMapper;
+
+    @Autowired
+    private SchoolProfileService schoolProfileService;
     
     @Override
     public List<Location> getAllLocations() {
@@ -56,13 +60,15 @@ public class LocationServiceImpl extends ServiceImpl<LocationMapper, Location> i
         
         // 保存地点
         save(location);
+        schoolProfileService.recalculateRoomCapacity(location.getSchoolName());
     }
     
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateLocation(Location location) {
         // 检查地点是否存在
-        if (getById(location.getId()) == null) {
+        Location existing = getById(location.getId());
+        if (existing == null) {
             throw new ApiException(ResultCode.LOCATION_NOT_EXIST);
         }
         
@@ -72,8 +78,12 @@ public class LocationServiceImpl extends ServiceImpl<LocationMapper, Location> i
             throw new ApiException(ResultCode.DUPLICATE_LOCATION_NAME);
         }
         
-        // 更新地点信息
+        // 更新地点信息，并同步重算旧、新学校画像
         updateById(location);
+        schoolProfileService.recalculateRoomCapacity(existing.getSchoolName());
+        if (!java.util.Objects.equals(existing.getSchoolName(), location.getSchoolName())) {
+            schoolProfileService.recalculateRoomCapacity(location.getSchoolName());
+        }
     }
     
     @Override
@@ -90,7 +100,9 @@ public class LocationServiceImpl extends ServiceImpl<LocationMapper, Location> i
         }
         
         // 删除地点（逻辑删除）
+        String schoolName = getById(id).getSchoolName();
         removeById(id);
+        schoolProfileService.recalculateRoomCapacity(schoolName);
     }
     
     @Override

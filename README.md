@@ -57,7 +57,7 @@
    └── agent 模块（独立，只调 Service，不写 SQL）
         ├── AgentEngine        对话循环：模型 ↔ 工具执行（最多 8 轮）
         ├── AgentToolRegistry  扫描 @AgentTool 注解，注册工具并反射执行
-        ├── tools              searchLectures / getMyRegistrations / registerLecture / cancelRegistration
+        ├── tools              查询/报名/取消/统计/文案/评价/容量/讲座草稿确认
         └── AgentContext       登录用户身份透传（工具不接受模型传参，防越权）
 ```
 

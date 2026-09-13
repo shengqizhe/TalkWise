@@ -211,6 +211,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         userInfoDTO.setEmail(user.getEmail());
         userInfoDTO.setPhone(user.getPhone());
         userInfoDTO.setAvatar(user.getAvatar());
+        userInfoDTO.setTitle(user.getTitle());
+        userInfoDTO.setBio(user.getBio());
         userInfoDTO.setDepartmentId(user.getDepartmentId());
         userInfoDTO.setInterestTags(user.getInterestTags());
         userInfoDTO.setParticipationScore(user.getParticipationScore() != null ?

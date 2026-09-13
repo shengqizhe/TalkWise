@@ -1,4 +1,9 @@
-# 更新日志（Changelog）
+## 2026-09-13 · Agent 扩展：确认式创建与通用主动任务
+
+- 删除旧 `/api/ai/*` Controller、Service、DTO 及前端 API，统一使用 `/api/agent/chat`。
+- 新增讲座草稿确认动作：`prepareLectureCreation`、`/api/agent/actions/{id}/confirm`、`/api/agent/actions/{id}/reject`。
+- 新增通用主动任务接口和执行器注册表，保留评价分析异步任务。
+
 
 **知讲 TalkWise** — 大学讲座智能平台（Spring Boot 3 + Vue 3 + LangChain4j Agent）
 
@@ -6,6 +11,13 @@
 > 每条附提交短哈希，便于与 git 历史对照。
 
 ---
+
+## 2026-09-13 · 阶段 D：容量规划基础能力
+
+- 新增学校画像与可维护教室容量范围，地点增改删后自动重算最小/最大容量。
+- 新增教师职称/简介字段，为讲师声望判断提供输入。
+- 新增 `estimateCapacity` Agent 工具：有效报名历史统计结合内容热度、讲师声望、校本契合度三维定性判断，后端负责边界裁剪与 `round-to` 向上取整。
+- 本轮只返回建议容量，不自动修改讲座容量、不推荐具体教室；RAG 作为后续可替换的学校画像数据源。
 
 ## 2026-09-11 · 后端与数据库补齐：签到 / 评价
 

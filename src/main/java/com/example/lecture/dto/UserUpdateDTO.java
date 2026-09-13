@@ -36,6 +36,18 @@ public class UserUpdateDTO {
     private String phone;
     
     /**
+     * 职称或头衔
+     */
+    @Size(max = 100, message = "职称/头衔长度不能超过100个字符")
+    private String title;
+
+    /**
+     * 个人简介
+     */
+    @Size(max = 2000, message = "个人简介长度不能超过2000个字符")
+    private String bio;
+
+    /**
      * 头像URL
      */
     private String avatar;

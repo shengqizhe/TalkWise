@@ -25,6 +25,11 @@ public class Location {
     private String name;
     
     /**
+     * 所属学校名称
+     */
+    private String schoolName;
+
+    /**
      * 经度
      */
     private BigDecimal longitude;
@@ -38,6 +43,11 @@ public class Location {
      * 地点类型（如building）
      */
     private String type;
+
+    /**
+     * 地点容量
+     */
+    private Integer capacity;
     
     /**
      * 详细地址（可选）

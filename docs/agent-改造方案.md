@@ -210,10 +210,11 @@ public String registerLecture(Long lectureId) { ... }
 | A | 后端最小闭环：对话引擎 + 工具注册表 + 4 个工具（searchLectures / getMyRegistrations / registerLecture / cancelRegistration，写操作直接执行）+ 审计日志 + API key 迁配置 | ✅ 已完成 |
 | B | 前端接入：悬浮球切 `/api/agent/chat`、工具调用轨迹展示、管理员控制台 AI 入口 | ✅ 已完成 |
 | 加固 | 同用户会话串行化（ReentrantLock + 30s 等待上限，防并发请求交错污染会话历史） | ✅ 已完成 |
-| C | Agent 能力扩展：① 统计问答工具 queryStatistics（管理员/教师自然语言查数据，映射预定义指标、不生成 SQL）；② 单步功能点：讲座文案生成（替换 PromotionContentUtil）、评价情感分析（落库空置字段） | 下一步 |
-| D | 容量规划（统计×语义混合 + 教师确认）：统计查历史满座率，LLM 评估内容重要性/讲师声望出定性等级，规则融合出建议容量 | 待办 |
-| E | 持久化与可观测（上线前必做）：agent_session / agent_message / agent_trace 落表替代内存会话；执行追踪查询接口；旧 `/api/ai/*` 下线 | 待办 |
-| F | 可选进阶：SSE 流式输出；RAG 答疑（先评估讲座资料数据量，薄则不做）；主动任务（定时提醒、报表推送） | 可选 |
+| C | Agent 能力扩展：统计问答、讲座文案生成、评价分析（当前为分批 Map-Reduce，并支持大数据量异步任务） | ✅ 已完成 |
+| D | 容量规划：有效报名统计 × 三维语义定性（内容热度/讲师声望/校本契合度），规则边界裁剪与取整，只返回建议容量 | ✅ 已完成 |
+| E | 对话式创建讲座（草稿确认后写入）、通用主动任务接口与执行器注册；会话/Trace 持久化和旧 AI 接口清理 | 🚧 部分完成 |
+| F | 持久化与可观测：agent_session / agent_message / agent_trace、执行追踪查询 | 待办 |
+| G | 可选进阶：SSE 流式输出；RAG 答疑；主动报表/提醒执行器 | 可选 |
 
 **当前架构要点**（供演示/面试）：
 - 单 Agent：一个决策循环 + 工具集，角色差异靠工具权限而非多 Agent

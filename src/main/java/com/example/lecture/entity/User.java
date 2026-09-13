@@ -64,6 +64,18 @@ public class User {
     private Long departmentId;
 
     /**
+     * 职称或头衔
+     */
+    @ExcelProperty(value = "职称/头衔")
+    private String title;
+
+    /**
+     * 个人简介
+     */
+    @ExcelProperty(value = "个人简介")
+    private String bio;
+
+    /**
      * 头像URL
      */
     private String avatar;
