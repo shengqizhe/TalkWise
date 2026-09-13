@@ -40,3 +40,7 @@ frontend/dist/
 .env
 .env.local
 !.env.example
+
+### 本地工具生成文件（个人工作记录，不提交） ###
+.workbuddy/
+.zcode/
