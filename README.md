@@ -76,7 +76,7 @@
 - JDK 17+（命令行注意 `JAVA_HOME` 指向 17）
 - MySQL 8+
 - Node.js 16+
-- Maven（可用项目自带 `mvnw`）
+- Maven 3.6+（使用系统 `mvn`；仓库已移除 `mvnw` / `mvnw.cmd` 与 `.mvn` wrapper）
 
 ### 后端启动
 ```bash
@@ -84,15 +84,32 @@
 # 2. 配置环境变量（敏感信息不进代码库）：
 #    方式一（推荐）：复制 .env.example 为 .env 并填入真实值（.env 已被 gitignore）
 #        Git Bash 加载：  set -a; source .env; set +a
-#        IDEA 加载：      安装 EnvFile 插件并勾选 .env 文件
+#        IDEA 加载：      见下方「IDEA 中启动（EnvFile 插件）」
 #    方式二：手动逐个设置（见下方 Windows 提示）
 #    必需项：MYSQL_PASSWORD / MAIL_USERNAME / MAIL_PASSWORD / OPENAI_API_KEY
 # 3. 启动
-JAVA_HOME=/path/to/jdk-17 ./mvnw spring-boot:run
+mvn spring-boot:run
 # 服务地址 http://localhost:8080/api（Swagger: /api/swagger-ui.html）
 ```
-> Windows 提示：若系统默认 JDK 为 8，请先设置 `set JAVA_HOME=D:\jdk\jdk-17.0.14`（或对应路径）再运行 `mvnw.cmd`；
+> Windows 提示：若系统默认 JDK 为 8，请先设置 `set JAVA_HOME=D:\jdk\jdk-17.0.14`（或对应路径）再运行 `mvn`；
 > 环境变量示例：`set MYSQL_PASSWORD=你的密码`（其余同理，启动前逐个设置）。
+
+### IDEA 中启动（EnvFile 插件）
+
+IDEA 直接点 Run 启动时不会自动读取 `.env`，会因占位符无法解析而报错：
+
+```
+java.lang.IllegalArgumentException: Could not resolve placeholder 'MAIL_USERNAME' in value "${MAIL_USERNAME}"
+```
+
+这是因为 `application.yml` 中的 `${MYSQL_PASSWORD}` / `${MAIL_USERNAME}` / `${MAIL_PASSWORD}` / `${OPENAI_API_KEY}` 只由 `.env` 提供，而 Spring Boot 不认识 `.env`，只读系统环境变量、JVM 参数与命令行参数。用 EnvFile 插件即可让 IDEA 一键加载：
+
+1. `Settings` → `Plugins` 搜索 `EnvFile`，安装后重启 IDEA；
+2. `Run` → `Edit Configurations` → 选中 `UniversityLectureManagementSystemApplication`；
+3. 勾选 `Enable EnvFile`，添加 `.env` 文件路径（项目根目录的 `.env`）；
+4. 同时确认该运行配置的 `JRE` 为 JDK 17（`File` → `Project Structure` → `Project SDK` 也建议设为 17）。
+
+完成后点 Run 即可正常启动。
 
 ### 前端启动
 ```bash
