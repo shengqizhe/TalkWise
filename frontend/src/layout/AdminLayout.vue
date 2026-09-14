@@ -14,6 +14,24 @@
           >
             {{ item.label }}
           </router-link>
+          <!-- 低频功能收进「更多」，避免顶栏在 1280px 以下拥挤换行 -->
+          <el-dropdown trigger="click" @command="handleNavCommand">
+            <span class="top-link more-link" :class="{ active: isMoreActive }">
+              更多
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item
+                  v-for="item in moreMenus"
+                  :key="item.path"
+                  :command="item.path"
+                  :class="{ 'is-current': isActive(item.path) }"
+                >
+                  {{ item.label }}
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </nav>
       </div>
       <div class="user-area">
@@ -40,26 +58,10 @@
       </div>
     </header>
 
-    <div class="adm-wrap">
-      <!-- 左侧栏 -->
-      <aside class="adm-aside">
-        <router-link
-          v-for="item in sideMenus"
-          :key="item.path"
-          :to="item.path"
-          class="side-item"
-          :class="{ active: isActive(item.path) }"
-        >
-          <span>{{ item.icon }}</span>
-          <span>{{ item.label }}</span>
-        </router-link>
-      </aside>
-
-      <!-- 主内容 -->
-      <main class="adm-main">
-        <router-view />
-      </main>
-    </div>
+    <!-- 主内容（已取消左侧栏，内容区占满整宽） -->
+    <main class="adm-main">
+      <router-view />
+    </main>
 
     <!-- 个人信息对话框 -->
     <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px">
@@ -138,28 +140,39 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 
-// 顶部导航（与设计稿一致）
+// 顶部导航：高频功能平铺（实测 13 项平铺需 1129px，在 1280px 屏余量过小，故低频项收进「更多」）
 const topMenus = [
+  { label: "仪表盘", path: "/admin/dashboard" },
   { label: "讲座审核", path: "/admin/audit" },
   { label: "用户管理", path: "/admin/student-user" },
   { label: "讲师管理", path: "/admin/teacher-user" },
-  { label: "分类管理", path: "/admin/category" },
   { label: "数据报表", path: "/admin/report" },
+  { label: "任务中心", path: "/admin/tasks" },
 ];
 
-// 左侧栏（与设计稿一致 + 系统原有管理入口）
-const sideMenus = [
-  { label: "仪表盘", path: "/admin/dashboard", icon: "📊" },
-  { label: "审核队列", path: "/admin/audit", icon: "📝" },
-  { label: "发布管理", path: "/admin/publish", icon: "📦" },
-  { label: "权限设置", path: "/admin/permission", icon: "⚙️" },
-  { label: "系统通知", path: "/admin/notice", icon: "🔔" },
-  { label: "地点管理", path: "/admin/location", icon: "📍" },
-  { label: "系别管理", path: "/admin/department", icon: "🏛" },
+// 低频功能：从「更多」下拉进入，去掉原有的 emoji 图标
+const moreMenus = [
+  { label: "发布管理", path: "/admin/publish" },
+  { label: "分类管理", path: "/admin/category" },
+  { label: "地点管理", path: "/admin/location" },
+  { label: "系别管理", path: "/admin/department" },
+  { label: "学校画像", path: "/admin/school-profile" },
+  { label: "系统通知", path: "/admin/notice" },
+  { label: "权限设置", path: "/admin/permission" },
 ];
 
 function isActive(path) {
   return route.path === path;
+}
+
+/** 当前路由属于「更多」里的页面时，让“更多”保持高亮，避免用户不知道自己在哪 */
+const isMoreActive = computed(() => moreMenus.some((item) => route.path === item.path));
+
+/** 「更多」下拉项的跳转 */
+function handleNavCommand(path) {
+  if (path && route.path !== path) {
+    router.push(path);
+  }
 }
 
 const avatarText = computed(() => {
@@ -369,6 +382,20 @@ const submitPasswordForm = async () => {
   border-bottom-color: #000;
 }
 
+/* 「更多」入口：与普通导航项样式一致，可点击 */
+.more-link {
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+/* 「更多」下拉中，当前所在页面高亮 */
+:deep(.el-dropdown-menu__item.is-current) {
+  color: #000;
+  font-weight: 600;
+  background: #f5f5f5;
+}
+
 /* ---------- 用户区 ---------- */
 .user-area {
   display: flex;
@@ -409,50 +436,15 @@ const submitPasswordForm = async () => {
   color: #333;
 }
 
-/* ---------- 左侧栏 ---------- */
-.adm-wrap {
-  display: flex;
-  min-height: calc(100vh - 60px);
-}
-
-.adm-aside {
-  width: 200px;
-  flex-shrink: 0;
-  border-right: 1px solid #eee;
-  padding: 20px 12px;
-  background: #fff;
-}
-
-.side-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  margin-bottom: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.side-item:hover {
-  background: #f5f5f5;
-}
-
-.side-item.active {
-  background: #000;
-  color: #fff;
-  font-weight: 500;
-}
+/* ---------- 左侧栏样式已随布局合并移除 ---------- */
 
 /* ---------- 主内容 ---------- */
+/* 内容区占满整宽（无左侧栏），用居中容器限制阅读宽度 */
 .adm-main {
-  flex: 1;
+  min-height: calc(100vh - 60px);
   padding: 28px 32px;
-  min-width: 0;
   background: #fff;
+  box-sizing: border-box;
 }
 
 /* ---------- 弹窗公共 ---------- */

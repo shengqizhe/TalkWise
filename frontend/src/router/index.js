@@ -171,6 +171,18 @@ const routes = [
         meta: { roles: ["admin"] },
       },
       {
+        path: "school-profile",
+        name: "SchoolProfileManagement",
+        component: () => import("../views/admin/SchoolProfileManagement.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
+        path: "tasks",
+        name: "TaskCenter",
+        component: () => import("../views/admin/TaskCenter.vue"),
+        meta: { roles: ["admin"] },
+      },
+      {
         path: "category",
         name: "AdminCategory",
         component: () => import("../views/admin/AdminCategory.vue"),
