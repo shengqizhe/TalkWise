@@ -315,7 +315,7 @@ onUnmounted(() => {
   padding: 10px 16px;
   margin-bottom: 8px;
   border: 1px solid #e0e0e0;
-  border-radius: 20px;
+  border-radius: 8px;
   background: #fff;
   color: #555;
   cursor: pointer;
@@ -400,7 +400,7 @@ onUnmounted(() => {
   background-color: #000;
   color: #fff;
   border: none;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;

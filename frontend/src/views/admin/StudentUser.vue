@@ -1,99 +1,56 @@
 <template>
-  <div class="student-user">
-    <!-- 学生用户管理欢迎卡片 -->
-    <el-row :gutter="20">
-      <el-col :span="24">
-        <el-card class="welcome-card">
-          <div class="welcome-content">
-            <div class="welcome-text">
-              <h2>学生用户管理</h2>
-              <p>这里可以管理所有学生用户的信息</p>
-            </div>
-            <div class="welcome-avatar">
-              <el-avatar
-                  :size="80"
-                  :src="userStore.userInfo?.avatar"
-                  @click="openProfileDialog"
-              >
-                {{
-                  userStore.userInfo?.realName?.charAt(0) ||
-                  userStore.userInfo?.username?.charAt(0)
-                }}
-              </el-avatar>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="adm-user-page">
+    <div class="adm-title-row">
+      <h1 class="adm-page-h1">学生用户管理</h1>
+    </div>
 
-    <!-- 搜索栏 -->
-    <el-row :gutter="20" style="margin: 20px 0">
-      <el-col :lg="6" :md="6" :sm="12" :xl="6" :xs="24" class="search-item">
-        <el-input
-            v-model="query.keyword"
-            clearable
-            placeholder="请输入姓名或学号搜索"
-            @keyup.enter="handleSearch"
-        >
-          <template #append>
-            <el-button @click="handleSearch" type="primary">搜索</el-button>
-          </template>
-        </el-input>
-      </el-col>
-      <el-col :lg="4" :md="4" :sm="12" :xl="4" :xs="24" class="search-item">
-        <el-select
-            v-model="query.departmentId"
-            clearable
-            placeholder="选择系别"
-            @change="handleSearch"
-        >
-          <el-option
-              v-for="dept in departmentList"
-              :key="dept.id"
-              :label="dept.departmentName"
-              :value="dept.id"
-          />
-        </el-select>
-      </el-col>
-      <el-col :lg="4" :md="4" :sm="12" :xl="4" :xs="24" class="search-item">
-        <el-button style="width: 100%;" @click="handleReset">重置</el-button>
-      </el-col>
-      <!-- 新增：导入导出按钮 -->
-      <el-col :lg="10" :md="10" :sm="24" :xl="10" :xs="24" class="button-group">
-        <el-button type="primary" @click="importDialogVisible = true"
-        >导入名单
-        </el-button
-        >
-        <el-dropdown @command="handleExportCommand">
-          <el-button type="success">
-            导出名单
-            <el-icon class="el-icon--right">
-              <arrow-down/>
-            </el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="current">导出当前页面</el-dropdown-item>
-              <el-dropdown-item command="all">导出全部学生</el-dropdown-item>
-              <el-dropdown-item command="selected">导出选中学生</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <!-- 新增：下载模板按钮 -->
-        <el-button @click="handleDownloadTemplate">下载模板</el-button>
-      </el-col>
-    </el-row>
+    <!-- 搜索与操作 -->
+    <div class="adm-search-row">
+      <el-input
+          v-model="query.keyword"
+          class="keyword-input"
+          clearable
+          placeholder="请输入姓名或学号搜索"
+          @keyup.enter="handleSearch"
+      />
+      <el-select
+          v-model="query.departmentId"
+          class="dept-select"
+          clearable
+          placeholder="选择系别"
+          @change="handleSearch"
+      >
+        <el-option
+            v-for="dept in departmentList"
+            :key="dept.id"
+            :label="dept.departmentName"
+            :value="dept.id"
+        />
+      </el-select>
+      <button class="adm-btn" @click="handleSearch">搜索</button>
+      <button class="adm-btn" @click="handleReset">重置</button>
+      <button class="adm-btn adm-btn-primary" @click="importDialogVisible = true">导入名单</button>
+      <el-dropdown @command="handleExportCommand">
+        <button class="adm-btn">导出名单</button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="current">导出当前页面</el-dropdown-item>
+            <el-dropdown-item command="all">导出全部学生</el-dropdown-item>
+            <el-dropdown-item command="selected">导出选中学生</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      <button class="adm-btn" @click="handleDownloadTemplate">下载模板</button>
+    </div>
 
     <!-- 学生用户表格 -->
     <el-table
         ref="studentTableRef"
         v-loading="loading"
         :data="studentList"
-        border
         @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="55"/>
-      <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="username" label="用户名" />
       <el-table-column prop="realName" label="姓名" />
       <el-table-column prop="studentTeacherId" label="学号" />
@@ -104,28 +61,11 @@
           <span>{{ getDepartmentName(scope.row.departmentId) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="300">
+      <el-table-column label="操作" width="230">
         <template #default="scope">
-          <!-- 编辑按钮 -->
-          <el-button
-              size="small"
-              type="primary"
-              @click="openEditDialog(scope.row)"
-          >编辑
-          </el-button
-          >
-          <!-- 设为老师按钮 -->
-          <el-button
-              size="small"
-              type="success"
-              @click="setAsTeacher(scope.row)"
-          >设为老师
-          </el-button
-          >
-          <el-button size="small" type="danger" @click="handleDelete(scope.row)"
-          >删除
-          </el-button
-          >
+          <button class="adm-btn" @click="openEditDialog(scope.row)">编辑</button>
+          <button class="adm-btn" @click="setAsTeacher(scope.row)">设为老师</button>
+          <button class="adm-btn adm-btn-red" @click="handleDelete(scope.row)">删除</button>
         </template>
       </el-table-column>
     </el-table>
@@ -199,70 +139,6 @@
         <el-button @click="importDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
-
-    <!-- 个人信息对话框 -->
-    <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px">
-      <el-form
-          ref="profileFormRef"
-          :model="profileForm"
-          :rules="profileRules"
-          label-width="100px"
-      >
-        <el-form-item label="头像">
-          <div class="avatar-upload-container">
-            <el-avatar
-                :size="100"
-                :src="profileForm.avatar || userStore.userInfo?.avatar"
-            >
-              {{
-                userStore.userInfo?.realName?.charAt(0) ||
-                userStore.userInfo?.username?.charAt(0)
-              }}
-            </el-avatar>
-          </div>
-        </el-form-item>
-        <el-form-item label="用户名" prop="username">
-          <el-input
-              v-model="profileForm.username"
-              disabled
-              placeholder="请输入用户名"
-          />
-        </el-form-item>
-        <el-form-item label="真实姓名" prop="realName">
-          <el-input
-              v-model="profileForm.realName"
-              disabled
-              placeholder="请输入真实姓名"
-          />
-        </el-form-item>
-        <el-form-item label="管理员ID" prop="studentTeacherId">
-          <el-input
-              v-model="profileForm.studentTeacherId"
-              disabled
-              placeholder="请输入管理员ID"
-          />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input
-              v-model="profileForm.email"
-              disabled
-              placeholder="请输入邮箱"
-          />
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input
-              v-model="profileForm.phone"
-              disabled
-              placeholder="请输入手机号"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="profileDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -270,8 +146,7 @@
 // 引入Vue相关API
 import {onMounted, reactive, ref} from "vue";
 // 引入Element Plus消息组件
-import {ElMessage, ElMessageBox} from "element-plus";
-import {ArrowDown} from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from "element-plus";
 // 引入学生用户相关API
 import {
   deleteStudentUser,
@@ -285,35 +160,6 @@ import ExcelImporter from "../../components/ExcelImporter.vue";
 // 引入系别相关API
 import {fetchAllDepartments} from "../../api/department.js";
 import {utils, writeFile} from "xlsx";
-// 引入用户存储
-import {useUserStore} from "../../stores/user";
-
-// 获取用户存储
-const userStore = useUserStore();
-
-// 个人信息相关
-const profileDialogVisible = ref(false);
-const profileForm = reactive({
-  id: "",
-  username: "",
-  realName: "",
-  studentTeacherId: "",
-  email: "",
-  phone: "",
-  avatar: "",
-  departmentId: null,
-});
-
-// 表单校验规则
-const profileRules = {};
-const profileFormRef = ref(null);
-
-// 打开个人信息对话框
-const openProfileDialog = () => {
-  // 填充表单数据
-  Object.assign(profileForm, userStore.userInfo);
-  profileDialogVisible.value = true;
-};
 
 // 学生用户列表数据
 const studentList = ref([]); // 学生用户列表
@@ -587,56 +433,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.student-user {
-  padding: 20px;
-}
-.welcome-card {
-  background: linear-gradient(135deg, #000 0%, #333 100%);
-  color: white;
-}
-.welcome-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.welcome-text h2 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-}
-.welcome-text p {
-  margin: 0;
-  opacity: 0.9;
+/* 管理端页面统一风格：标题行 + 搜索行 + 表格块（与 theme.css 的 adm-* 规范一致） */
+.adm-user-page {
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
-.button-group {
+/* 搜索行内控件：与按钮基线对齐、间距一致 */
+.adm-search-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
-  margin-top: 10px;
 }
 
-.search-item {
-  margin-bottom: 10px;
+.adm-search-row .keyword-input {
+  width: 240px;
 }
 
-/* 响应式调整 */
-@media screen and (max-width: 768px) {
-  .button-group {
-    justify-content: flex-start;
-  }
-
-  .el-select {
-    width: 100%;
-  }
-}
-
-@media screen and (max-width: 576px) {
-  .button-group {
-    justify-content: center;
-  }
-
-  .search-item {
-    margin-bottom: 15px;
-  }
+.adm-search-row .dept-select {
+  width: 160px;
 }
 </style>

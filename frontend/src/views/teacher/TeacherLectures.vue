@@ -1108,7 +1108,7 @@ onUnmounted(() => {
   background: #000;
   color: #fff;
   border: none;
-  border-radius: 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-family: inherit;

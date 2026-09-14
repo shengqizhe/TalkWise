@@ -238,7 +238,7 @@ onMounted(loadMyLectures);
   background: #000;
   color: #fff;
   border: none;
-  border-radius: 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 13px;
   font-family: inherit;

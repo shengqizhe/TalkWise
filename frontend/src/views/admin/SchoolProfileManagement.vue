@@ -1,49 +1,24 @@
 <template>
-  <div class="school-profile">
-    <!-- 欢迎卡片 -->
-    <el-row :gutter="20">
-      <el-col :span="24">
-        <el-card class="welcome-card">
-          <div class="welcome-content">
-            <div class="welcome-text">
-              <h2>学校画像</h2>
-              <p>维护学校办学定位、优势学科与学生群体特征，供 AI 容量评估判断“校本契合度”</p>
-            </div>
-            <div class="welcome-avatar">
-              <el-avatar :size="80" :src="userStore.userInfo?.avatar">
-                {{
-                  userStore.userInfo?.realName?.charAt(0) ||
-                  userStore.userInfo?.username?.charAt(0)
-                }}
-              </el-avatar>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="adm-user-page">
+    <div class="adm-title-row">
+      <h1 class="adm-page-h1">学校画像</h1>
+    </div>
 
-    <!-- 搜索栏 -->
-    <el-row :gutter="20" style="margin: 20px 0">
-      <el-col :span="6">
-        <el-input
+    <!-- 搜索与操作 -->
+    <div class="adm-search-row">
+      <el-input
           v-model="query.keyword"
+          class="keyword-input"
           placeholder="请输入学校名称搜索"
           clearable
           @keyup.enter="handleSearch"
-        >
-          <template #append>
-            <el-button type="primary" @click="handleSearch">搜索</el-button>
-          </template>
-        </el-input>
-      </el-col>
-      <el-col :span="6">
-        <el-button @click="handleReset">重置</el-button>
-        <el-button type="primary" @click="openAddDialog">新增学校画像</el-button>
-      </el-col>
-    </el-row>
+      />
+      <button class="adm-btn" @click="handleSearch">搜索</button>
+      <button class="adm-btn" @click="handleReset">重置</button>
+      <button class="adm-btn adm-btn-primary" @click="openAddDialog">新增学校画像</button>
+    </div>
 
-    <!-- 画像表格 -->
-    <el-table :data="profileList" v-loading="loading" border>
+    <el-table :data="profileList" v-loading="loading">
       <el-table-column prop="schoolName" label="学校名称" width="200" />
       <el-table-column label="画像内容" min-width="320">
         <template #default="scope">
@@ -60,10 +35,10 @@
         </template>
       </el-table-column>
       <el-table-column prop="updatedTime" label="更新时间" width="180" />
-      <el-table-column label="操作" width="200">
+      <el-table-column label="操作" width="160">
         <template #default="scope">
-          <el-button size="small" type="primary" @click="openEditDialog(scope.row)">编辑</el-button>
-          <el-button size="small" type="danger" @click="handleDelete(scope.row)">删除</el-button>
+          <button class="adm-btn" @click="openEditDialog(scope.row)">编辑</button>
+          <button class="adm-btn adm-btn-red" @click="handleDelete(scope.row)">删除</button>
         </template>
       </el-table-column>
     </el-table>
@@ -117,15 +92,12 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { useUserStore } from "../../stores/user";
 import {
   getAllSchoolProfiles,
   createSchoolProfile,
   updateSchoolProfile,
   deleteSchoolProfile,
 } from "../../api/schoolProfile";
-
-const userStore = useUserStore();
 
 const loading = ref(false);
 const allProfiles = ref([]); // 全量数据（前端过滤 + 分页）
@@ -272,34 +244,20 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.school-profile {
+/* 管理端页面统一风格：标题行 + 搜索行 + 表格块（与 theme.css 的 adm-* 规范一致） */
+.adm-user-page {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #333;
 }
 
-.welcome-card {
-  border-radius: 16px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-}
-
-.welcome-content {
+.adm-search-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
 }
 
-.welcome-text h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 800;
-  color: #222;
-}
-
-.welcome-text p {
-  margin: 0;
-  font-size: 14px;
-  color: #888;
+.adm-search-row .keyword-input {
+  width: 240px;
 }
 
 .field-hint {

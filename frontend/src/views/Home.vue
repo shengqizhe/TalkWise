@@ -151,7 +151,7 @@ a {
 .btn-login {
   padding: 8px 24px;
   border: 1px solid #dcdcdc;
-  border-radius: 20px;
+  border-radius: 8px;
   font-size: 14px;
   color: #333;
 }

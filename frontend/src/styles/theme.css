@@ -46,10 +46,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- 胶囊按钮（原型 btn-blue-solid / btn-white 风格） ---------- */
+/* ---------- 按钮：小圆角（与 .adm-btn 的 8px 规范一致，不使用胶囊） ---------- */
 .el-button {
-  border-radius: 999px;
+  border-radius: 8px;
   font-weight: 500;
+}
+
+/* 表格行内的小按钮同样保持小圆角 */
+.el-button--small {
+  border-radius: 6px;
 }
 
 /* 页面容器卡片：无边框 + 柔和阴影（原型 .card-block / .lecture-card） */

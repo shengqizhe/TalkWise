@@ -1,54 +1,30 @@
 <template>
-  <div class="task-center">
-    <!-- 欢迎卡片 -->
-    <el-row :gutter="20">
-      <el-col :span="24">
-        <el-card class="welcome-card">
-          <div class="welcome-content">
-            <div class="welcome-text">
-              <h2>任务中心</h2>
-              <p>AI 后台任务：报表生成与讲座提醒会在后台执行，完成后通过通知栏告知你</p>
-            </div>
-            <div class="welcome-avatar">
-              <el-avatar :size="80" :src="userStore.userInfo?.avatar">
-                {{
-                  userStore.userInfo?.realName?.charAt(0) ||
-                  userStore.userInfo?.username?.charAt(0)
-                }}
-              </el-avatar>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="adm-user-page">
+    <div class="adm-title-row">
+      <h1 class="adm-page-h1">任务中心</h1>
+    </div>
 
     <!-- 筛选与新建 -->
-    <el-row :gutter="20" style="margin: 20px 0">
-      <el-col :span="5">
-        <el-select v-model="query.type" placeholder="全部类型" clearable @change="handleSearch">
-          <el-option label="报表生成" value="report_generation" />
-          <el-option label="提醒推送" value="reminder_notification" />
-          <el-option label="评价分析" value="evaluation_analysis" />
-        </el-select>
-      </el-col>
-      <el-col :span="5">
-        <el-select v-model="query.status" placeholder="全部状态" clearable @change="handleSearch">
-          <el-option label="排队中" value="PENDING" />
-          <el-option label="执行中" value="RUNNING" />
-          <el-option label="已完成" value="SUCCESS" />
-          <el-option label="已失败" value="FAILED" />
-          <el-option label="已取消" value="CANCELLED" />
-        </el-select>
-      </el-col>
-      <el-col :span="6">
-        <el-button @click="handleReset">重置</el-button>
-        <el-button type="primary" @click="openReportDialog">新建报表</el-button>
-        <el-button type="primary" @click="openReminderDialog">新建提醒</el-button>
-      </el-col>
-    </el-row>
+    <div class="adm-search-row">
+      <el-select v-model="query.type" class="adm-select" placeholder="全部类型" clearable @change="handleSearch">
+        <el-option label="报表生成" value="report_generation" />
+        <el-option label="提醒推送" value="reminder_notification" />
+        <el-option label="评价分析" value="evaluation_analysis" />
+      </el-select>
+      <el-select v-model="query.status" class="adm-select" placeholder="全部状态" clearable @change="handleSearch">
+        <el-option label="排队中" value="PENDING" />
+        <el-option label="执行中" value="RUNNING" />
+        <el-option label="已完成" value="SUCCESS" />
+        <el-option label="已失败" value="FAILED" />
+        <el-option label="已取消" value="CANCELLED" />
+      </el-select>
+      <button class="adm-btn" @click="handleReset">重置</button>
+      <button class="adm-btn adm-btn-primary" @click="openReportDialog">新建报表</button>
+      <button class="adm-btn adm-btn-primary" @click="openReminderDialog">新建提醒</button>
+    </div>
 
     <!-- 任务表格 -->
-    <el-table :data="taskList" v-loading="loading" border>
+    <el-table :data="taskList" v-loading="loading">
       <el-table-column prop="id" label="任务号" width="90" />
       <el-table-column label="类型" width="110">
         <template #default="scope">{{ typeLabel(scope.row.type) }}</template>
@@ -72,31 +48,28 @@
       </el-table-column>
       <el-table-column prop="progressText" label="进度说明" min-width="160" show-overflow-tooltip />
       <el-table-column prop="createdTime" label="创建时间" width="170" />
-      <el-table-column label="操作" width="220">
+      <el-table-column label="操作" width="200">
         <template #default="scope">
-          <el-button
+          <button
             v-if="scope.row.status === 'SUCCESS'"
-            size="small"
-            type="primary"
+            class="adm-btn"
             @click="openResultDialog(scope.row)"
-          >查看结果</el-button>
-          <el-button
+          >查看结果</button>
+          <button
             v-if="scope.row.status === 'FAILED'"
-            size="small"
-            type="warning"
+            class="adm-btn"
             @click="handleRetry(scope.row)"
-          >重试</el-button>
-          <el-button
+          >重试</button>
+          <button
             v-if="scope.row.status === 'PENDING' || scope.row.status === 'RUNNING'"
-            size="small"
-            type="danger"
+            class="adm-btn adm-btn-red"
             @click="handleCancel(scope.row)"
-          >取消</el-button>
-          <el-button
+          >取消</button>
+          <button
             v-if="scope.row.status === 'FAILED'"
-            size="small"
+            class="adm-btn"
             @click="openErrorDialog(scope.row)"
-          >失败原因</el-button>
+          >失败原因</button>
         </template>
       </el-table-column>
     </el-table>
@@ -187,7 +160,6 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
-import { useUserStore } from "../../stores/user";
 import {
   getAgentTaskPage,
   createAgentTask,
@@ -195,8 +167,6 @@ import {
   retryAgentTask,
 } from "../../api/agentTask";
 import { getLecturePage } from "../../api/lecture";
-
-const userStore = useUserStore();
 
 const loading = ref(false);
 const submitting = ref(false);
@@ -416,34 +386,16 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.task-center {
+/* 管理端页面统一风格：标题行 + 筛选行 + 表格块（与 theme.css 的 adm-* 规范一致） */
+.adm-user-page {
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
-  color: #333;
 }
 
-.welcome-card {
-  border-radius: 16px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-}
-
-.welcome-content {
+.adm-search-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-}
-
-.welcome-text h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  font-weight: 800;
-  color: #222;
-}
-
-.welcome-text p {
-  margin: 0;
-  font-size: 14px;
-  color: #888;
+  gap: 10px;
 }
 
 .field-hint {
@@ -465,7 +417,6 @@ onMounted(() => {
   line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: "PingFang SC", "Microsoft YaHei", monospace;
 }
 
 .error-detail {

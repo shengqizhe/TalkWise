@@ -1,100 +1,57 @@
 <template>
-  <div class="teacher-user">
-    <!-- 教师用户管理欢迎卡片 -->
-    <el-row :gutter="20">
-      <el-col :span="24">
-        <el-card class="welcome-card">
-          <div class="welcome-content">
-            <div class="welcome-text">
-              <h2>教师用户管理</h2>
-              <p>这里可以管理所有教师用户的信息</p>
-            </div>
-            <div class="welcome-avatar">
-              <el-avatar
-                :size="80"
-                :src="userStore.userInfo?.avatar"
-                @click="openProfileDialog"
-              >
-                {{
-                  userStore.userInfo?.realName?.charAt(0) ||
-                  userStore.userInfo?.username?.charAt(0)
-                }}
-              </el-avatar>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+  <div class="adm-user-page">
+    <div class="adm-title-row">
+      <h1 class="adm-page-h1">教师用户管理</h1>
+    </div>
 
-    <!-- 搜索栏 -->
-    <el-row :gutter="20" class="search-row">
-      <el-col :lg="6" :md="6" :sm="12" :xl="6" :xs="24" class="search-item">
-        <el-input
+    <!-- 搜索与操作 -->
+    <div class="adm-search-row">
+      <el-input
           v-model="query.keyword"
+          class="keyword-input"
           placeholder="请输入用户名、姓名或教师编号搜索"
           clearable
           @keyup.enter="handleSearch"
-        >
-          <template #append>
-            <el-button @click="handleSearch" type="primary">搜索</el-button>
-          </template>
-        </el-input>
-      </el-col>
-      <el-col :lg="4" :md="4" :sm="12" :xl="4" :xs="24" class="search-item">
-        <el-select
+      />
+      <el-select
           v-model="query.departmentId"
+          class="dept-select"
           placeholder="选择系别"
           clearable
           @change="handleSearch"
-        >
-          <el-option
+      >
+        <el-option
             v-for="dept in departmentList"
             :key="dept.id"
             :label="dept.departmentName"
             :value="dept.id"
-          />
-        </el-select>
-      </el-col>
-      <el-col :lg="4" :md="4" :sm="12" :xl="4" :xs="24" class="search-item button-container">
-        <el-button @click="handleReset">重置</el-button>
-        <el-button type="primary" @click="openAddDialog">新增教师</el-button>
-      </el-col>
-
-      <!-- 导入导出按钮 -->
-      <el-col :lg="10" :md="10" :sm="24" :xl="10" :xs="24" class="button-group">
-        <el-button type="primary" @click="importDialogVisible = true"
-          >导入名单</el-button
-        >
-        <el-dropdown @command="handleExportCommand">
-          <el-button type="success">
-            导出名单
-            <el-icon class="el-icon--right">
-              <arrow-down/>
-            </el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="current">导出当前页面</el-dropdown-item>
-              <el-dropdown-item command="all">导出全部教师</el-dropdown-item>
-              <el-dropdown-item command="selected">导出选中教师</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-        <!-- 下载模板按钮 -->
-        <el-button @click="handleDownloadTemplate">下载模板</el-button>
-      </el-col>
-    </el-row>
+        />
+      </el-select>
+      <button class="adm-btn" @click="handleSearch">搜索</button>
+      <button class="adm-btn" @click="handleReset">重置</button>
+      <button class="adm-btn adm-btn-primary" @click="openAddDialog">新增教师</button>
+      <button class="adm-btn adm-btn-primary" @click="importDialogVisible = true">导入名单</button>
+      <el-dropdown @command="handleExportCommand">
+        <button class="adm-btn">导出名单</button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="current">导出当前页面</el-dropdown-item>
+            <el-dropdown-item command="all">导出全部教师</el-dropdown-item>
+            <el-dropdown-item command="selected">导出选中教师</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+      <button class="adm-btn" @click="handleDownloadTemplate">下载模板</button>
+    </div>
 
     <!-- 教师用户表格 -->
     <el-table
         ref="teacherTableRef"
         v-loading="loading"
         :data="teacherList"
-        border
         @selection-change="handleSelectionChange"
     >
       <el-table-column type="selection" width="55"/>
-      <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="username" label="用户名" />
       <el-table-column prop="realName" label="姓名" />
       <el-table-column prop="studentTeacherId" label="教师编号" />
@@ -105,23 +62,11 @@
           <span>{{ getDepartmentName(scope.row.departmentId) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="280">
+      <el-table-column label="操作" width="240">
         <template #default="scope">
-          <el-button
-            size="small"
-            type="primary"
-            @click="openEditDialog(scope.row)"
-            >编辑</el-button
-          >
-          <el-button
-            size="small"
-            type="warning"
-            @click="handleResetPassword(scope.row)"
-            >重置密码</el-button
-          >
-          <el-button size="small" type="danger" @click="handleDelete(scope.row)"
-            >删除</el-button
-          >
+          <button class="adm-btn" @click="openEditDialog(scope.row)">编辑</button>
+          <button class="adm-btn" @click="handleResetPassword(scope.row)">重置密码</button>
+          <button class="adm-btn adm-btn-red" @click="handleDelete(scope.row)">删除</button>
         </template>
       </el-table-column>
     </el-table>
@@ -202,70 +147,6 @@
         <el-button @click="importDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
-
-    <!-- 个人信息对话框 -->
-    <el-dialog v-model="profileDialogVisible" title="个人信息" width="500px">
-      <el-form
-        ref="profileFormRef"
-        :model="profileForm"
-        :rules="profileRules"
-        label-width="100px"
-      >
-        <el-form-item label="头像">
-          <div class="avatar-upload-container">
-            <el-avatar
-              :size="100"
-              :src="profileForm.avatar || userStore.userInfo?.avatar"
-            >
-              {{
-                userStore.userInfo?.realName?.charAt(0) ||
-                userStore.userInfo?.username?.charAt(0)
-              }}
-            </el-avatar>
-          </div>
-        </el-form-item>
-        <el-form-item label="用户名" prop="username">
-          <el-input
-            v-model="profileForm.username"
-            placeholder="请输入用户名"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="真实姓名" prop="realName">
-          <el-input
-            v-model="profileForm.realName"
-            placeholder="请输入真实姓名"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="管理员ID" prop="studentTeacherId">
-          <el-input
-            v-model="profileForm.studentTeacherId"
-            placeholder="请输入管理员ID"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="profileForm.email"
-            placeholder="请输入邮箱"
-            disabled
-          />
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input
-            v-model="profileForm.phone"
-            placeholder="请输入手机号"
-            disabled
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button @click="profileDialogVisible = false">关闭</el-button>
-        </div>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -275,7 +156,6 @@
 import {onMounted, reactive, ref} from "vue";
 // 引入Element Plus消息组件
 import {ElMessage, ElMessageBox} from "element-plus";
-import {ArrowDown} from '@element-plus/icons-vue';
 // 引入教师用户相关API
 import {
   addTeacherUser,
@@ -287,15 +167,10 @@ import {
 } from "../../api/teacherUser.js";
 // 引入系别相关API
 import {fetchAllDepartments} from "../../api/department.js";
-// 引入用户存储
-import {useUserStore} from "../../stores/user";
 // 引入Excel导入组件
 import ExcelImporter from "../../components/ExcelImporter.vue";
 // 引入Excel导出工具
 import {utils, writeFile} from "xlsx";
-
-// 获取用户存储
-const userStore = useUserStore();
 
 // 导入导出相关逻辑
 const importDialogVisible = ref(false);
@@ -425,30 +300,6 @@ const exportTeacherData = async (teacherData, filename) => {
 // 兼容旧的导出方法（保持向后兼容）
 const handleExport = () => {
   handleExportCurrent();
-};
-
-// 个人信息相关
-const profileDialogVisible = ref(false);
-const profileForm = reactive({
-  id: "",
-  username: "",
-  realName: "",
-  studentTeacherId: "",
-  email: "",
-  phone: "",
-  avatar: "",
-  departmentId: null,
-});
-
-// 表单校验规则
-const profileRules = {};
-const profileFormRef = ref(null);
-
-// 打开个人信息对话框
-const openProfileDialog = () => {
-  // 填充表单数据
-  Object.assign(profileForm, userStore.userInfo);
-  profileDialogVisible.value = true;
 };
 
 // 教师用户列表数据
@@ -640,116 +491,24 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.teacher-user {
-  padding: 20px;
+/* 管理端页面统一风格：标题行 + 搜索行 + 表格块（与 theme.css 的 adm-* 规范一致） */
+.adm-user-page {
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
 }
-.welcome-card {
-  background: linear-gradient(135deg, #000 0%, #333 100%);
-  color: white;
-}
-.welcome-content {
+
+/* 搜索行内控件：与按钮基线对齐、间距一致 */
+.adm-search-row {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
-}
-.welcome-text h2 {
-  margin: 0 0 10px 0;
-  font-size: 24px;
-}
-.welcome-text p {
-  margin: 0;
-  opacity: 0.9;
-}
-
-.search-row {
-  margin: 20px 0;
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.button-group {
-  display: flex;
-  flex-wrap: wrap;
   gap: 10px;
-  margin-top: 10px;
 }
 
-.search-item {
-  margin-bottom: 10px;
+.adm-search-row .keyword-input {
+  width: 260px;
 }
 
-.button-container {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.button-container .el-button:first-child {
-  margin-right: 10px;
-}
-
-/* 响应式调整 */
-@media screen and (max-width: 992px) and (min-width: 769px) {
-  .button-group {
-    justify-content: flex-start;
-    margin-top: 10px;
-    gap: 8px;
-  }
-
-  .el-select {
-    width: 100%;
-  }
-}
-
-@media screen and (max-width: 768px) and (min-width: 577px) {
-  .button-group {
-    justify-content: flex-start;
-    margin-top: 15px;
-  }
-
-  .button-group .el-button {
-    margin-bottom: 10px;
-    margin-right: 10px;
-  }
-
-  .el-select {
-    width: 100%;
-  }
-
-  .button-container {
-    justify-content: flex-start;
-    margin-top: 15px;
-  }
-}
-
-@media screen and (max-width: 576px) {
-  .button-group {
-    justify-content: flex-start;
-    width: 100%;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .button-group .el-button {
-    margin-right: 0;
-    margin-bottom: 10px;
-    width: 100%;
-  }
-
-  .search-item {
-    margin-bottom: 15px;
-  }
-
-  .button-container {
-    justify-content: flex-start;
-    width: 100%;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .button-container .el-button {
-    margin-bottom: 10px;
-    margin-right: 0 !important;
-    width: 100%;
-  }
+.adm-search-row .dept-select {
+  width: 160px;
 }
 </style>
